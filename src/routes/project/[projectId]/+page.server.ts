@@ -1,6 +1,6 @@
 import { db } from "$lib/server/db";
-import { projects as projectsTable } from "$lib/server/db/schema";
-import { and, eq } from "drizzle-orm";
+import { notes as notesTable, projects as projectsTable } from "$lib/server/db/schema";
+import { and, desc, eq } from "drizzle-orm";
 import { error, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
@@ -16,5 +16,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	if (!project) error(404, "Project not found");
 
-	return { project };
+	const projectNotes = await db
+		.select({
+			id: notesTable.id,
+			title: notesTable.title,
+			updatedAt: notesTable.updatedAt,
+			metadata: notesTable.metadata,
+		})
+		.from(notesTable)
+		.where(and(eq(notesTable.ownerId, session.user.id), eq(notesTable.projectId, params.projectId)))
+		.orderBy(desc(notesTable.updatedAt));
+
+	return { project, projectNotes };
 };

@@ -1,0 +1,104 @@
+<script lang="ts">
+  import { onDestroy, tick } from "svelte";
+  import { invalidateAll } from "$app/navigation";
+
+  let {
+    noteId,
+    initialTitle,
+    onSaveStatus,
+  }: {
+    noteId: string;
+    initialTitle: string;
+    onSaveStatus?: (s: "idle" | "saving" | "saved" | "error") => void;
+  } = $props();
+
+  // svelte-ignore state_referenced_locally (initialTitle is correct on each fresh mount)
+  let value = $state(initialTitle);
+  let editing = $state(false);
+
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+  let inputEl = $state<HTMLInputElement | null>(null);
+
+  async function saveTitle(next: string) {
+    onSaveStatus?.("saving");
+    try {
+      const r = await fetch(`/api/notes/${noteId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: next }),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      onSaveStatus?.("saved");
+      await invalidateAll();
+      setTimeout(() => onSaveStatus?.("idle"), 1400);
+    } catch {
+      onSaveStatus?.("error");
+    }
+  }
+
+  function scheduleSave() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      void saveTitle(value.trim() === "" ? "Untitled note" : value.trim());
+    }, 550);
+  }
+
+  async function commitAndExit() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = null;
+    await saveTitle(value.trim() === "" ? "Untitled note" : value.trim());
+    editing = false;
+  }
+
+  async function startEditing() {
+    editing = true;
+    await tick();
+    inputEl?.focus();
+    inputEl?.select();
+  }
+
+  function onInputBlur() {
+    void commitAndExit();
+  }
+
+  function onTitleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      void commitAndExit();
+    }
+  }
+
+  onDestroy(() => {
+    if (debounceTimer) clearTimeout(debounceTimer);
+  });
+</script>
+
+<div class="w-full min-w-0">
+  {#if !editing}
+    <button
+      type="button"
+      class="hover:bg-accent/50 border-border text-foreground focus-visible:ring-ring/40 max-w-full rounded-xl border border-transparent px-1 py-1 text-left text-[1.35rem] leading-snug font-semibold tracking-[-0.02em] transition-colors focus-visible:ring-[3px] focus-visible:outline-none sm:text-[1.45rem]"
+      onclick={() => void startEditing()}
+    >
+      {value.trim() === "" ? "Untitled note" : value}
+    </button>
+  {:else}
+    <label class="block w-full" for="note-title-{noteId}">
+      <span class="sr-only">Note title</span>
+      <input
+        bind:this={inputEl}
+        id="note-title-{noteId}"
+        type="text"
+        autocomplete="off"
+        spellcheck={true}
+        placeholder="Untitled note"
+        bind:value
+        oninput={scheduleSave}
+        onblur={onInputBlur}
+        onkeydown={onTitleKeydown}
+        class="border-input bg-muted/20 font-sans placeholder:text-muted-foreground/55 focus-visible:ring-ring/35 w-full rounded-lg border px-3 py-2 text-xl leading-snug font-semibold tracking-[-0.015em] shadow-none outline-none transition-[box-shadow,background-color,border-color] focus-visible:border-ring focus-visible:bg-background focus-visible:ring-[3px] sm:text-[1.35rem]"
+      />
+    </label>
+  {/if}
+</div>
