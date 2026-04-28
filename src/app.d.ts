@@ -17,6 +17,16 @@ declare module "@auth/sveltekit" {
 			id: string;
 			role: "admin" | "premium" | "standard";
 		} & DefaultSession["user"];
+		/** True when an admin is viewing the app as another user */
+		impersonating?: boolean;
+		/** The signed-in admin (only set while impersonating) */
+		impersonator?: {
+			id: string;
+			name?: string | null;
+			email?: string | null;
+			image?: string | null;
+			role: "admin" | "premium" | "standard";
+		};
 	}
 	interface User {
 		role: "admin" | "premium" | "standard";

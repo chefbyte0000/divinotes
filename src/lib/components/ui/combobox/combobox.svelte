@@ -35,27 +35,32 @@
 </script>
 
 <Popover.Root bind:open>
-  <Popover.Trigger asChild let:builder>
-    <Button
-      builders={[builder]}
-      variant="outline"
-      role="combobox"
-      aria-expanded={open}
-      class="w-full justify-between"
-    >
-      <span class={cn(!value && "text-muted-foreground")}>
-        {value || placeholder}
-      </span>
-      <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-    </Button>
+  <Popover.Trigger>
+    {#snippet child({ props })}
+      <Button
+        {...props}
+        variant="outline"
+        role="combobox"
+        aria-expanded={open}
+        class="w-full justify-between font-normal"
+      >
+        <span class={cn(!value && "text-muted-foreground")}>
+          {value || placeholder}
+        </span>
+        <ChevronsUpDown class="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+    {/snippet}
   </Popover.Trigger>
-  <Popover.Content class="w-[var(--rct-anchor-width)] p-0">
+  <Popover.Content class="max-w-[min(90vw,24rem)] min-w-[12rem] p-0" align="start">
     <Command.Root shouldFilter={false}>
-      <Command.Input {placeholder} bind:value={searchQuery} class="h-9" />
+      <Command.Input placeholder="Search..." bind:value={searchQuery} class="h-9" />
       <Command.Empty>No option found.</Command.Empty>
       <Command.List>
         {#each filteredOptions as option (option)}
-          <Command.Item value={option} onSelect={() => handleSelect(option)}>
+          <Command.Item
+            value={option}
+            onSelect={() => handleSelect(option)}
+          >
             <Check
               class={cn(
                 "mr-2 h-4 w-4",

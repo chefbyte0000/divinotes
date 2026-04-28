@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { writable } from "svelte/store";
   import {
     createSvelteTable,
     flexRender,
@@ -10,6 +11,8 @@
     type SortingState,
     type ColumnFiltersState,
     type VisibilityState,
+    type RowSelectionState,
+    type Updater,
   } from "tanstack-table-8-svelte-5";
   import * as Table from "$lib/components/ui/table/index.js";
   import DataTableToolbar from "./data-table-toolbar.svelte";
@@ -35,40 +38,44 @@
   let sorting = $state<SortingState>([]);
   let columnFilters = $state<ColumnFiltersState>([]);
   let columnVisibility = $state<VisibilityState>({});
-  let rowSelection = $state({});
+  let rowSelection = $state<RowSelectionState>({});
 
-  const table = createSvelteTable({
-    get data() {
-      return data;
-    },
-    get columns() {
-      return columns;
-    },
-    get state() {
-      return { sorting, columnFilters, columnVisibility, rowSelection };
-    },
-    enableRowSelection: true,
-    columnResizeMode: "onChange",
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    onSortingChange: (updater) => {
-      sorting = typeof updater === "function" ? updater(sorting) : updater;
-    },
-    onColumnFiltersChange: (updater) => {
-      columnFilters =
-        typeof updater === "function" ? updater(columnFilters) : updater;
-    },
-    onColumnVisibilityChange: (updater) => {
-      columnVisibility =
-        typeof updater === "function" ? updater(columnVisibility) : updater;
-    },
-    onRowSelectionChange: (updater) => {
-      rowSelection =
-        typeof updater === "function" ? updater(rowSelection) : updater;
-    },
+  function tableOptions() {
+    return {
+      data,
+      columns,
+      state: { sorting, columnFilters, columnVisibility, rowSelection },
+      enableRowSelection: true,
+      columnResizeMode: "onChange" as const,
+      getCoreRowModel: getCoreRowModel(),
+      getPaginationRowModel: getPaginationRowModel(),
+      getSortedRowModel: getSortedRowModel(),
+      getFilteredRowModel: getFilteredRowModel(),
+      onSortingChange: (updater: Updater<SortingState>) => {
+        sorting = typeof updater === "function" ? updater(sorting) : updater;
+      },
+      onColumnFiltersChange: (updater: Updater<ColumnFiltersState>) => {
+        columnFilters =
+          typeof updater === "function" ? updater(columnFilters) : updater;
+      },
+      onColumnVisibilityChange: (updater: Updater<VisibilityState>) => {
+        columnVisibility =
+          typeof updater === "function" ? updater(columnVisibility) : updater;
+      },
+      onRowSelectionChange: (updater: Updater<RowSelectionState>) => {
+        rowSelection =
+          typeof updater === "function" ? updater(rowSelection) : updater;
+      },
+    };
+  }
+
+  const tableOptionsStore = writable(tableOptions());
+
+  $effect(() => {
+    tableOptionsStore.set(tableOptions());
   });
+
+  const table = createSvelteTable(tableOptionsStore);
 </script>
 
 <div class="w-full space-y-4">

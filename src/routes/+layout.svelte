@@ -6,13 +6,24 @@
   } from "$lib/components/ui/sidebar/index.js";
   import Sidebar from "$lib/components/layout/sidebar.svelte";
   import NotificationPopover from "$lib/components/layout/notification-popover.svelte";
+  import ImpersonationBanner from "$lib/components/layout/impersonation-banner.svelte";
+  import { page } from "$app/stores";
 
   let { children } = $props();
+
+  let impersonationSession = $derived($page.data.session);
 </script>
 
 <SidebarProvider>
   <Sidebar />
   <main class="relative flex min-h-screen w-full flex-col bg-background">
+    {#if impersonationSession?.impersonating && impersonationSession.user}
+      <ImpersonationBanner
+        targetEmail={impersonationSession.user.email}
+        targetName={impersonationSession.user.name}
+      />
+    {/if}
+
     <!-- Mobile-first Header with Top-Right Actions -->
     <header
       class="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-md lg:px-6"

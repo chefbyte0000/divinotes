@@ -6,12 +6,23 @@
 
   let { table }: { table: Table<any> } = $props();
 
+  const columnLabel: Record<string, string> = {
+    member: "Member",
+    name: "Name",
+    email: "Email",
+    role: "Role",
+    status: "Status",
+    verified: "Verified",
+  };
+
   let hidableColumns = $derived(
     table
       .getAllColumns()
       .filter(
         (column) =>
-          typeof column.accessorFn !== "undefined" && column.getCanHide(),
+          column.getCanHide() &&
+          column.id !== "select" &&
+          column.id !== "actions",
       ),
   );
 </script>
@@ -21,25 +32,31 @@
     {#snippet child({ props })}
       <Button
         {...props}
+        type="button"
         variant="outline"
         size="sm"
-        class="ml-auto hidden h-8 lg:flex"
+        class="h-9 shrink-0"
       >
         <Settings2 class="mr-2 h-4 w-4" />
         View
       </Button>
     {/snippet}
   </DropdownMenu.Trigger>
-  <DropdownMenu.Content align="end" class="w-37.5">
-    <DropdownMenu.Label>Toggle columns</DropdownMenu.Label>
+  <DropdownMenu.Content align="end" class="min-w-44">
+    <DropdownMenu.Label>Columns</DropdownMenu.Label>
     <DropdownMenu.Separator />
     {#each hidableColumns as column (column.id)}
       <DropdownMenu.CheckboxItem
         checked={column.getIsVisible()}
         onCheckedChange={(value) => column.toggleVisibility(!!value)}
+        closeOnSelect={false}
       >
-        <span class="capitalize">{column.id}</span>
+        {columnLabel[column.id] ?? column.id}
       </DropdownMenu.CheckboxItem>
+    {:else}
+      <div class="text-muted-foreground px-2 py-1.5 text-xs">
+        No toggles available.
+      </div>
     {/each}
   </DropdownMenu.Content>
 </DropdownMenu.Root>

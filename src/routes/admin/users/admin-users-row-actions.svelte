@@ -2,23 +2,46 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
-  import { MoreHorizontal, Copy, Trash2 } from "@lucide/svelte";
+  import { MoreHorizontal, Copy, Trash2, UserRound } from "@lucide/svelte";
   import { enhance } from "$app/forms";
   import { invalidateAll } from "$app/navigation";
 
-  let { id }: { id: string } = $props();
+  let {
+    userId,
+    actorUserId,
+    allowImpersonate,
+  }: {
+    userId: string;
+    actorUserId: string;
+    allowImpersonate: boolean;
+  } = $props();
+
+  const isSelf = $derived(userId === actorUserId);
 
   let showDeleteDialog = $state(false);
   let isDeleting = $state(false);
 
+  /** Hidden form for progressive-enhancement POST to the impersonate action */
+  let impersonateForm: HTMLFormElement | undefined = $state();
+
   async function copyId() {
     try {
-      await navigator.clipboard.writeText(id);
+      await navigator.clipboard.writeText(userId);
     } catch {
       // Clipboard may be unavailable (permissions / non-secure context)
     }
   }
 </script>
+
+<form
+  bind:this={impersonateForm}
+  method="POST"
+  action="?/impersonateUser"
+  class="hidden"
+  aria-hidden="true"
+>
+  <input type="hidden" name="userId" value={userId} />
+</form>
 
 <DropdownMenu.Root>
   <DropdownMenu.Trigger>
@@ -33,28 +56,40 @@
       </Button>
     {/snippet}
   </DropdownMenu.Trigger>
-  <DropdownMenu.Content align="end" class="w-[160px]">
-    <DropdownMenu.Label class="lowercase">actions</DropdownMenu.Label>
+  <DropdownMenu.Content align="end" class="w-52">
+    <DropdownMenu.Label>Actions</DropdownMenu.Label>
     <DropdownMenu.Separator />
-    <DropdownMenu.Item onclick={copyId} class="lowercase">
-      <Copy class="mr-2 h-4 w-4" /> copy user id
+    <DropdownMenu.Item onclick={copyId}>
+      <Copy class="mr-2 h-4 w-4" /> Copy user ID
     </DropdownMenu.Item>
-    <DropdownMenu.Separator />
-    <DropdownMenu.Item
-      onclick={() => {
-        showDeleteDialog = true;
-      }}
-      class="text-destructive lowercase data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
-    >
-      <Trash2 class="mr-2 h-4 w-4" /> delete user
-    </DropdownMenu.Item>
+    {#if allowImpersonate && !isSelf}
+      <DropdownMenu.Item
+        onSelect={(e) => {
+          e.preventDefault();
+          impersonateForm?.requestSubmit();
+        }}
+      >
+        <UserRound class="mr-2 h-4 w-4" /> Impersonate user
+      </DropdownMenu.Item>
+    {/if}
+    {#if !isSelf}
+      <DropdownMenu.Separator />
+      <DropdownMenu.Item
+        onclick={() => {
+          showDeleteDialog = true;
+        }}
+        class="text-destructive data-[highlighted]:bg-destructive/10 data-[highlighted]:text-destructive"
+      >
+        <Trash2 class="mr-2 h-4 w-4" /> Delete user
+      </DropdownMenu.Item>
+    {/if}
   </DropdownMenu.Content>
 </DropdownMenu.Root>
 
 <Dialog.Root bind:open={showDeleteDialog}>
   <Dialog.Content class="sm:max-w-[425px]" showCloseButton={!isDeleting}>
     <Dialog.Header>
-      <Dialog.Title class="lowercase">delete user</Dialog.Title>
+      <Dialog.Title>Delete user</Dialog.Title>
       <Dialog.Description>
         This permanently removes the account from the workspace. This cannot be undone.
       </Dialog.Description>
@@ -85,7 +120,7 @@
           };
         }}
       >
-        <input type="hidden" name="userId" value={id} />
+        <input type="hidden" name="userId" value={userId} />
         <Button variant="destructive" type="submit" disabled={isDeleting}>
           {isDeleting ? "Deleting..." : "Delete"}
         </Button>
