@@ -39,6 +39,10 @@
 
 <Sidebar.Root class="border-r border-border bg-sidebar text-sidebar-foreground">
   <Sidebar.Header class="p-4">
+    <div class="p-4 text-xs bg-muted/50 border-b break-all">
+      <strong>Debug Role:</strong>
+      {sessionUser?.role ?? "undefined"}
+    </div>
     <div class="flex items-center gap-3 font-bold tracking-tight">
       <div
         class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm"
@@ -69,20 +73,24 @@
 
     <Sidebar.Separator class="mx-3 my-4 opacity-40" />
 
-    <Sidebar.Group>
-      <Sidebar.GroupLabel
-        class="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
-      >
-        Administration
-      </Sidebar.GroupLabel>
-      <Sidebar.GroupContent>
-        <Sidebar.Menu class="space-y-0.5">
-          {#each adminItems as item}
-            <NavItem icon={item.icon} title={item.title} url={item.url} />
-          {/each}
-        </Sidebar.Menu>
-      </Sidebar.GroupContent>
-    </Sidebar.Group>
+    {#if sessionUser?.role === "admin"}
+      <Sidebar.Separator class="mx-3 my-4 opacity-40" />
+
+      <Sidebar.Group>
+        <Sidebar.GroupLabel
+          class="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+        >
+          Administration
+        </Sidebar.GroupLabel>
+        <Sidebar.GroupContent>
+          <Sidebar.Menu class="space-y-0.5">
+            {#each adminItems as item}
+              <NavItem icon={item.icon} title={item.title} url={item.url} />
+            {/each}
+          </Sidebar.Menu>
+        </Sidebar.GroupContent>
+      </Sidebar.Group>
+    {/if}
   </Sidebar.Content>
 
   <Sidebar.Footer class="p-3">
