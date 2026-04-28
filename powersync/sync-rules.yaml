@@ -2,6 +2,8 @@
 # JWT must expose the authenticated user via request.user_id() (matches notes.owner_id / projects.owner_id).
 #
 # ElectricSQL: use shapes with equivalent WHERE predicates (owner scope + optional project partition).
+#
+# Client-only IndexedDB data (telemetry ledger, local user profile / habit insights) must never appear here.
 
 bucket_definitions:
   user_projects:

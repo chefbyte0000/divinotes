@@ -1,9 +1,13 @@
 <script lang="ts">
+  import { goto } from "$app/navigation";
+  import { page } from "$app/state";
   import NoteEditor from "$lib/components/editor/note-editor.svelte";
   import NoteTitleField from "$lib/components/editor/note-title-field.svelte";
   import DeleteNoteDialog from "$lib/components/editor/delete-note-dialog.svelte";
   import GeneralProjectSuggestionBanner from "$lib/components/editor/general-project-suggestion-banner.svelte";
+  import NudgeBanner from "$lib/components/nudge/NudgeBanner.svelte";
   import Backlinks from "$lib/components/editor/backlinks.svelte";
+  import { NudgeController, type NudgeOffer } from "$lib/nudge/NudgeController";
   import { parseNoteBody } from "$lib/tiptap/parse-note-body";
 
   let { data } = $props();
@@ -19,6 +23,42 @@
   let afterDeleteHref = $derived(
     data.note.projectId == null ? "/" : `/project/${data.note.projectId}`,
   );
+
+  let nudgeOffer = $state<NudgeOffer | null>(null);
+
+  $effect(() => {
+    void page.url.pathname;
+    void data.note.id;
+    void data.note.projectId;
+    const ctrl = new NudgeController(() => data.note.projectId ?? null);
+    return ctrl.observe((next) => {
+      if (!next) {
+        nudgeOffer = null;
+        return;
+      }
+      try {
+        if (sessionStorage.getItem(`nudge-dismiss:${next.id}`) === "1") {
+          nudgeOffer = null;
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
+      nudgeOffer = next;
+    });
+  });
+
+  function dismissNudge() {
+    const n = nudgeOffer;
+    if (n) {
+      try {
+        sessionStorage.setItem(`nudge-dismiss:${n.id}`, "1");
+      } catch {
+        /* ignore */
+      }
+    }
+    nudgeOffer = null;
+  }
 </script>
 
 <svelte:head>
@@ -61,6 +101,13 @@
       body={data.note.body}
     />
   {/if}
+
+  <NudgeBanner
+    variant="inline"
+    offer={nudgeOffer}
+    onDismiss={dismissNudge}
+    onPrimary={() => goto("/projects")}
+  />
 
   {#key data.note.id}
     <NoteEditor
