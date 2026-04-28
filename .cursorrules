@@ -1,0 +1,59 @@
+# Project manifest: Divinotes (local-first AI workspace)
+
+This file is the mental model for data, UI, and AI behavior. Prefer it over generic patterns when they conflict.
+
+## 1. Core vision
+
+Privacy-first, offline-capable productivity. Combines structured organization (Notion-like) with local-only AI: Gemma 8B in the browser via WebGPU, not server-side inference for core workflows.
+
+## 2. Technical philosophy (hard rules)
+
+### Local-first architecture
+
+The client-side database (IndexedDB / SQLite via the sync stack) is the **source of truth** for UX. PostgreSQL is the durable backend; sync runs in the background. The app must remain **fully usable offline** (read/write local state; sync queues or reconciles when online).
+
+### Strict context silos (critical)
+
+Data is segregated by **Project** (and the implicit **General** workspace where `project_id` is null).
+
+- A **Note** belongs to exactly one Project **or** General.
+- **Local AI and RAG** must only use content from the **active** project (or General when no project is active). Never blend Project A into prompts while the user works in Project B.
+- **Context links** (`[[link]]` graph edges) are **bidirectional** at the product level; initially they are **only allowed between notes in the same project** (or both in General). Enforce in application / transaction logic; do not rely on vague UI alone.
+
+### WebGPU first
+
+AI runs on the user’s hardware. Code must handle **loading**, **processing**, and **hardware not supported** without breaking the app.
+
+## 3. Tech stack
+
+- **Framework:** SvelteKit (mobile-first, touch-friendly).
+- **UI:** Tailwind + shadcn-svelte; distraction-free “zen” density and typography—minimal chrome, no heavy animation; interactions should feel instant.
+- **Data:** Drizzle ORM; sync via **PowerSync and/or ElectricSQL** (relational SQL, not a document store) for querying and cross-references.
+- **Auth:** Auth.js (existing codebase).
+- **Local AI:** Gemma 8B via WebLLM / WebGPU.
+
+## 4. Key entities (relational)
+
+| Entity        | Role                                                                 | Constraints |
+|---------------|----------------------------------------------------------------------|-------------|
+| **User**      | Account holder                                                       | Owns all synced data. |
+| **Project**   | Strict folder / context boundary                                     | Owned by user; scopes notes and (initially) links. |
+| **Note**      | Rich text or list content                                           | `owner_id` + optional `project_id` (null = General); `metadata` JSONB for status, tags, priority, etc. |
+| **Note link** | Graph edge between notes (source ↔ target)                          | Same-project (or General) rule; `owner_id` for sync filters. |
+| **Activity log** | Habit / telemetry                                                | **Device-local only**; never sync to server. |
+
+## 5. UI / UX tone
+
+- **Minimalist and fast:** avoid gratuitous motion; optimize perceived latency.
+- **AI as a ghost:** not chatbot-first—prefer inline ghost text, subtle actions, and lightweight assists.
+- **Sovereignty:** always surface **local vs synced** state where it affects trust or data safety.
+
+## 6. Repo anchors (implementation)
+
+- Drizzle schema: `src/lib/server/db/schema.ts` (`projects`, `notes`, `note_links`, strict `Project` / `Note` types).
+- PowerSync bucket rules: `powersync/sync-rules.yaml` (filter by `owner_id`; partition notes by `project_id` vs General).
+- ElectricSQL: mirror the same predicates in shape `where` clauses when wiring the client.
+
+When adding features, ask: “Does this respect project silos, local-first truth, and offline behavior?” If not, redesign.
+
+## 

@@ -1,0 +1,25 @@
+# PowerSync sync rules — replicate Postgres into local SQLite (client schema mirrors Drizzle).
+# JWT must expose the authenticated user via request.user_id() (matches notes.owner_id / projects.owner_id).
+#
+# ElectricSQL: use shapes with equivalent WHERE predicates (owner scope + optional project partition).
+
+bucket_definitions:
+  user_projects:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM projects WHERE owner_id = bucket.user_id
+
+  notes_by_project:
+    parameters: SELECT id AS project_id, request.user_id() AS user_id FROM projects WHERE owner_id = request.user_id()
+    data:
+      - SELECT * FROM notes WHERE owner_id = bucket.user_id AND project_id = bucket.project_id
+
+  notes_general:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM notes WHERE owner_id = bucket.user_id AND project_id IS NULL
+
+  user_note_links:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM note_links WHERE owner_id = bucket.user_id
