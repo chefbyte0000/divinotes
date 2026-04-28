@@ -39,10 +39,6 @@
 
 <Sidebar.Root class="border-r border-border bg-sidebar text-sidebar-foreground">
   <Sidebar.Header class="p-4">
-    <div class="p-4 text-xs bg-muted/50 border-b break-all">
-      <strong>Debug Role:</strong>
-      {sessionUser?.role ?? "undefined"}
-    </div>
     <div class="flex items-center gap-3 font-bold tracking-tight">
       <div
         class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm"
