@@ -5,6 +5,7 @@ import DataTableCheckbox from "$lib/components/ui/data-table/data-table-checkbox
 import DataTableRowActions from "$lib/components/ui/data-table/data-table-row-actions.svelte";
 import UserCell from "./user-cell.svelte";
 import StatusCell from "./status-cell.svelte";
+import RoleCell from "./role-cell.svelte";
 
 // Perfectly aligned with typeof users.$inferSelect from schema.ts
 export type UserRow = {
@@ -37,7 +38,6 @@ export const columns: ColumnDef<UserRow>[] = [
   },
   {
     accessorKey: "email",
-    // We removed id: "user" here. The table will naturally use "email" as the column ID!
     header: ({ column, header }) => renderComponent(DataTableColumnHeader, { column, header, title: "User" }),
     cell: ({ row }) =>
       renderComponent(UserCell, {
@@ -45,18 +45,31 @@ export const columns: ColumnDef<UserRow>[] = [
         email: row.original.email,
         avatar: row.original.image || "",
       }),
+    filterFn: "includesString",
     size: 250,
   },
   {
     accessorKey: "role",
     header: ({ column, header }) => renderComponent(DataTableColumnHeader, { column, header, title: "Role" }),
+    cell: ({ row }) =>
+      renderComponent(RoleCell, {
+        userId: row.original.id,
+        currentRole: row.original.role,
+      }),
+    filterFn: (row, id, filterValue) => {
+      return !filterValue || row.getValue(id) === filterValue;
+    },
     size: 150,
   },
   {
-    id: "status", // Virtual column derived from emailVerified
+    id: "status",
     accessorFn: (row) => (row.emailVerified ? "Active" : "Pending"),
     header: ({ column, header }) => renderComponent(DataTableColumnHeader, { column, header, title: "Status" }),
     cell: ({ row }) => renderComponent(StatusCell, { status: row.getValue("status") }),
+    filterFn: (row, id, filterValue) => {
+      const status = row.getValue(id) as string;
+      return !filterValue || status === filterValue;
+    },
     size: 120,
   },
   {

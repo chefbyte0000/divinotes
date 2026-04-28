@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
   import { ChevronLeft, ChevronRight } from "@lucide/svelte";
-  import type { Table } from "@tanstack/table-core";
+  import type { Table } from "tanstack-table-8-svelte-5";
 
   let { table }: { table: Table<any> } = $props();
 </script>

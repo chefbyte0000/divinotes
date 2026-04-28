@@ -22,11 +22,13 @@
     data,
     columns,
     searchColumn = "id",
+    searchColumns = [],
     filterFacets = [],
   }: {
     data: TData[];
     columns: ColumnDef<TData, TValue>[];
     searchColumn?: string;
+    searchColumns?: string[];
     filterFacets?: { columnId: string; title: string; options: string[] }[];
   } = $props();
 
@@ -70,7 +72,12 @@
 </script>
 
 <div class="w-full space-y-4">
-  <DataTableToolbar table={$table} {searchColumn} {filterFacets} />
+  <DataTableToolbar
+    table={$table}
+    {searchColumn}
+    {searchColumns}
+    {filterFacets}
+  />
 
   <div
     class="rounded-md border bg-card text-card-foreground shadow-sm overflow-hidden"

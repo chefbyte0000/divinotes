@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { cn } from "$lib/utils.js";
   import { ArrowDown, ArrowUp, ChevronsUpDown } from "@lucide/svelte";
-  import type { Column, Header } from "@tanstack/table-core";
+  import type { Column, Header } from "tanstack-table-8-svelte-5";
   let {
     column,
     header,
@@ -14,7 +14,25 @@
     title: string;
     class?: string;
   } = $props();
+
+  let isResizing = $state(false);
+
+  function handleMouseDown(e: MouseEvent) {
+    header.getResizeHandler()?.(e);
+    isResizing = true;
+  }
+
+  function handleMouseUp() {
+    isResizing = false;
+  }
+
+  function handleTouchStart(e: TouchEvent) {
+    header.getResizeHandler()?.(e as any);
+    isResizing = true;
+  }
 </script>
+
+<svelte:document onmouseup={handleMouseUp} />
 
 <div class={cn("flex items-center gap-2 relative group", className)}>
   {#if column.getCanSort()}
@@ -38,13 +56,18 @@
   {/if}
 
   {#if column.getCanResize()}
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
     <div
       role="separator"
-      tabindex="0"
       aria-orientation="vertical"
-      class="absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none bg-primary/0 transition-colors hover:bg-primary/50 active:bg-primary"
-      onmousedown={header.getResizeHandler()}
-      ontouchstart={header.getResizeHandler()}
+      class={cn(
+        "absolute right-0 top-0 h-full w-1.5 cursor-col-resize select-none touch-none bg-primary/0 transition-colors",
+        isResizing && "bg-primary",
+        !isResizing && "hover:bg-primary/50 active:bg-primary",
+      )}
+      onmousedown={handleMouseDown}
+      ontouchstart={handleTouchStart}
     ></div>
   {/if}
 </div>

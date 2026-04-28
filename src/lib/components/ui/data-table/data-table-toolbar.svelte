@@ -2,24 +2,44 @@
   import { Input } from "$lib/components/ui/input/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Dialog from "$lib/components/ui/dialog/index.js";
+  import { Combobox } from "$lib/components/ui/combobox/index.js";
   import { SlidersHorizontal, X } from "@lucide/svelte";
-  import type { Table } from "@tanstack/table-core";
+  import type { Table } from "tanstack-table-8-svelte-5";
   import DataTableViewOptions from "./data-table-view-options.svelte";
 
   let {
     table,
     searchColumn = "email",
+    searchColumns = [],
     filterFacets = [], // Array of { columnId: string, title: string, options: string[] }
   }: {
     table: Table<any>;
     searchColumn?: string;
+    searchColumns?: string[];
     filterFacets?: { columnId: string; title: string; options: string[] }[];
   } = $props();
 
   let filterModalOpen = $state(false);
+  let searchValue = $state("");
+
+  // If searchColumns is provided, use it. Otherwise fall back to searchColumn for backward compatibility
+  const searchCols = searchColumns.length > 0 ? searchColumns : [searchColumn];
+
+  function handleSearch(value: string) {
+    searchValue = value;
+
+    // Apply search to all specified columns
+    searchCols.forEach((colId) => {
+      const column = table.getColumn(colId);
+      if (column) {
+        column.setFilterValue(value || undefined);
+      }
+    });
+  }
 
   function resetFilters() {
     table.resetColumnFilters();
+    searchValue = "";
     filterModalOpen = false;
   }
 </script>
@@ -28,10 +48,10 @@
   <!-- Search Bar (Top Left) -->
   <div class="flex flex-1 items-center space-x-2">
     <Input
-      placeholder="Search {searchColumn}..."
-      value={(table.getColumn(searchColumn)?.getFilterValue() as string) ?? ""}
+      placeholder="Search users..."
+      value={searchValue}
       oninput={(e) => {
-        table.getColumn(searchColumn)?.setFilterValue(e.currentTarget.value);
+        handleSearch(e.currentTarget.value);
       }}
       class="h-8 w-[150px] lg:w-[250px]"
     />
@@ -40,7 +60,7 @@
       <Button
         variant="ghost"
         size="sm"
-        onclick={() => table.resetColumnFilters()}
+        onclick={() => resetFilters()}
         class="h-8 px-2 lg:px-3"
       >
         Reset
@@ -84,23 +104,17 @@
                 >
                   {facet.title}
                 </label>
-                <!-- Native select styled as shadcn combobox for maximum reliability -->
-                <select
-                  id={facet.columnId}
-                  class="flex h-9 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+                <Combobox
                   value={(table
                     .getColumn(facet.columnId)
                     ?.getFilterValue() as string) ?? ""}
-                  onchange={(e) =>
+                  options={facet.options}
+                  placeholder="Select {facet.title}..."
+                  onSelect={(selectedValue) =>
                     table
                       .getColumn(facet.columnId)
-                      ?.setFilterValue(e.currentTarget.value)}
-                >
-                  <option value="">All {facet.title}s</option>
-                  {#each facet.options as option}
-                    <option value={option}>{option}</option>
-                  {/each}
-                </select>
+                      ?.setFilterValue(selectedValue || undefined)}
+                />
               </div>
             {/each}
           </div>

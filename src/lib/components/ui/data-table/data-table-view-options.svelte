@@ -2,7 +2,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import { Settings2 } from "@lucide/svelte";
-  import type { Table } from "@tanstack/table-core";
+  import type { Table } from "tanstack-table-8-svelte-5";
 
   let { table }: { table: Table<any> } = $props();
 
