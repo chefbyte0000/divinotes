@@ -1,0 +1,14 @@
+version: "3"
+services:
+  database:
+    image: "postgres:latest"
+    ports:
+      - 5432:5432
+
+    environment:
+      POSTGRES_USER: robin
+      POSTGRES_PASSWORD: robin
+      POSTGRES_DB: divinotion
+
+    volumes:
+      - ./db-data/:/var/lib/postgresql/
