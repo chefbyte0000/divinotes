@@ -4,7 +4,9 @@
   import { TextSelection } from "@tiptap/pm/state";
 
   import EditorToolbar from "$lib/components/editor/editor-toolbar.svelte";
+  import { queueNoteEmbeddingSync } from "$lib/ai/note-embedding-sync";
   import { createNoteExtensions } from "$lib/tiptap/note-extensions";
+  import { jsonContentToPlainText } from "$lib/tiptap/json-content-to-plain-text";
 
   let {
     noteId,
@@ -37,6 +39,11 @@
         body: JSON.stringify({ content: doc }),
       });
       if (!r.ok) throw new Error(String(r.status));
+      queueNoteEmbeddingSync({
+        noteId,
+        projectId,
+        plainText: jsonContentToPlainText(doc),
+      });
       onSaveStatus?.("saved");
       setTimeout(() => onSaveStatus?.("idle"), 1600);
     } catch {

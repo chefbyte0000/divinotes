@@ -10,6 +10,7 @@ import {
 	index,
 } from "drizzle-orm/pg-core";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import type { SmartListItemRow, SmartListMetadata } from "$lib/types/smart-list";
 import type { AdapterAccount } from "@auth/core/adapters";
 
 export const roleEnum = pgEnum("role", ["admin", "premium", "standard"]);
@@ -127,3 +128,30 @@ export type NewNote = InferInsertModel<typeof notes>;
 
 export type NoteLink = InferSelectModel<typeof noteLinks>;
 export type NewNoteLink = InferInsertModel<typeof noteLinks>;
+
+export type { SmartListItemRow, SmartListMetadata };
+
+export const smartLists = pgTable(
+	"smart_lists",
+	{
+		id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+		ownerId: text("owner_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		/** Nullable: list lives in General when null — same silo rules as notes */
+		projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
+		title: text("title").notNull().default(""),
+		description: text("description"),
+		items: jsonb("items").$type<SmartListItemRow[]>().notNull().default([]),
+		metadata: jsonb("metadata").$type<SmartListMetadata>().notNull().default({}),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(t) => [
+		index("smart_lists_owner_id_idx").on(t.ownerId),
+		index("smart_lists_project_id_idx").on(t.projectId),
+	]
+);
+
+export type SmartList = InferSelectModel<typeof smartLists>;
+export type NewSmartList = InferInsertModel<typeof smartLists>;

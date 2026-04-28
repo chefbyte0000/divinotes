@@ -5,6 +5,7 @@ import type { ProjectNoteRow } from "$lib/types/project-notes";
 import ProjectNoteTitleCell from "./project-note-title-cell.svelte";
 import ProjectNoteTagsCell from "./project-note-tags-cell.svelte";
 import ProjectNoteUpdatedCell from "./project-note-updated-cell.svelte";
+import ProjectNoteActionsCell from "./project-note-actions-cell.svelte";
 
 function matchesSearch(row: ProjectNoteRow, filterValue: unknown): boolean {
 	if (filterValue === undefined || filterValue === "") return true;
@@ -56,6 +57,16 @@ export function createProjectNotesColumns(): ColumnDef<ProjectNoteRow>[] {
 				}),
 			enableSorting: false,
 			size: 260,
+		},
+		{
+			id: "actions",
+			header: "",
+			cell: ({ row }) =>
+				renderComponent(ProjectNoteActionsCell, {
+					note: row.original,
+				}),
+			enableSorting: false,
+			size: 56,
 		},
 	];
 }

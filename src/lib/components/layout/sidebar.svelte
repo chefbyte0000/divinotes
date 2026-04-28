@@ -17,6 +17,7 @@
     Home,
     Inbox,
     LayoutGrid,
+    ListTodo,
     Orbit,
     Plus,
     Users,
@@ -130,6 +131,12 @@
             title="Projects"
             url="/projects"
             isActive={pathname === "/projects"}
+          />
+          <NavItem
+            icon={ListTodo}
+            title="Lists"
+            url="/lists"
+            isActive={pathname === "/lists" || pathname.startsWith("/list/")}
           />
         </Sidebar.Menu>
 

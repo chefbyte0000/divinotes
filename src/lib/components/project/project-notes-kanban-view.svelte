@@ -1,6 +1,7 @@
 <script lang="ts">
   import { flip } from "svelte/animate";
   import { invalidateAll } from "$app/navigation";
+  import DeleteNoteDialog from "$lib/components/editor/delete-note-dialog.svelte";
   import {
     dndzone,
     SHADOW_PLACEHOLDER_ITEM_ID,
@@ -125,12 +126,24 @@
               : "border-border bg-card shadow-xs rounded-lg border px-3 py-2.5"}
             >
               {#if item.id !== SHADOW_PLACEHOLDER_ITEM_ID}
-                <a
-                  href="/note/{item.note.id}"
-                  class="text-primary hover:text-primary/80 line-clamp-2 text-sm font-medium leading-snug underline-offset-4 hover:underline"
-                >
-                  {titleOf(item.note)}
-                </a>
+                <div class="relative flex gap-2">
+                  <a
+                    href="/note/{item.note.id}"
+                    class="text-primary hover:text-primary/80 line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-snug underline-offset-4 hover:underline"
+                  >
+                    {titleOf(item.note)}
+                  </a>
+                  <!-- Isolate delete control from column drag-and-drop -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <div class="shrink-0" onclick={(e) => e.stopPropagation()}>
+                    <DeleteNoteDialog
+                      noteId={item.note.id}
+                      noteTitle={item.note.title ?? ""}
+                      variant="icon"
+                    />
+                  </div>
+                </div>
                 {#if item.note.metadata?.tags?.length}
                   <p class="text-muted-foreground mt-1.5 line-clamp-2 text-[11px]">
                     {(item.note.metadata.tags ?? []).join(" · ")}

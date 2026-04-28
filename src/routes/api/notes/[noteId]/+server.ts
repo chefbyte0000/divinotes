@@ -58,3 +58,20 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 
 	return json({ ok: true });
 };
+
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	const session = await locals.auth();
+	if (!session?.user?.id) error(401, "Unauthorized");
+
+	const [note] = await db
+		.select({ id: notesTable.id })
+		.from(notesTable)
+		.where(and(eq(notesTable.id, params.noteId), eq(notesTable.ownerId, session.user.id)))
+		.limit(1);
+
+	if (!note) error(404, "Note not found");
+
+	await db.delete(notesTable).where(eq(notesTable.id, params.noteId));
+
+	return json({ ok: true });
+};

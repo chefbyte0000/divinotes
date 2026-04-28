@@ -1,5 +1,9 @@
 import { db } from "$lib/server/db";
-import { notes as notesTable, projects as projectsTable } from "$lib/server/db/schema";
+import {
+	notes as notesTable,
+	projects as projectsTable,
+	smartLists as smartListsTable,
+} from "$lib/server/db/schema";
 import { and, desc, eq } from "drizzle-orm";
 import { error, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
@@ -27,5 +31,17 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.where(and(eq(notesTable.ownerId, session.user.id), eq(notesTable.projectId, params.projectId)))
 		.orderBy(desc(notesTable.updatedAt));
 
-	return { project, projectNotes };
+	const projectSmartLists = await db
+		.select({
+			id: smartListsTable.id,
+			title: smartListsTable.title,
+			updatedAt: smartListsTable.updatedAt,
+		})
+		.from(smartListsTable)
+		.where(
+			and(eq(smartListsTable.ownerId, session.user.id), eq(smartListsTable.projectId, params.projectId)),
+		)
+		.orderBy(desc(smartListsTable.updatedAt));
+
+	return { project, projectNotes, projectSmartLists };
 };

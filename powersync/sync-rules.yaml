@@ -19,6 +19,16 @@ bucket_definitions:
     data:
       - SELECT * FROM notes WHERE owner_id = bucket.user_id AND project_id IS NULL
 
+  smart_lists_by_project:
+    parameters: SELECT id AS project_id, request.user_id() AS user_id FROM projects WHERE owner_id = request.user_id()
+    data:
+      - SELECT * FROM smart_lists WHERE owner_id = bucket.user_id AND project_id = bucket.project_id
+
+  smart_lists_general:
+    parameters: SELECT request.user_id() AS user_id
+    data:
+      - SELECT * FROM smart_lists WHERE owner_id = bucket.user_id AND project_id IS NULL
+
   user_note_links:
     parameters: SELECT request.user_id() AS user_id
     data:

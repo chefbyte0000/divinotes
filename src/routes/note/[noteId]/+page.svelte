@@ -1,6 +1,7 @@
 <script lang="ts">
   import NoteEditor from "$lib/components/editor/note-editor.svelte";
   import NoteTitleField from "$lib/components/editor/note-title-field.svelte";
+  import DeleteNoteDialog from "$lib/components/editor/delete-note-dialog.svelte";
   import GeneralProjectSuggestionBanner from "$lib/components/editor/general-project-suggestion-banner.svelte";
   import Backlinks from "$lib/components/editor/backlinks.svelte";
   import { parseNoteBody } from "$lib/tiptap/parse-note-body";
@@ -14,6 +15,10 @@
   let workspaceLabel = $derived(
     data.note.projectId == null ? "General" : "Project note",
   );
+
+  let afterDeleteHref = $derived(
+    data.note.projectId == null ? "/" : `/project/${data.note.projectId}`,
+  );
 </script>
 
 <svelte:head>
@@ -24,21 +29,28 @@
   class="mx-auto flex w-full max-w-[min(96rem,calc(100vw-2rem))] flex-col gap-8 px-1 pb-16 pt-2 sm:px-2 md:gap-10"
 >
   <header class="flex flex-col gap-5">
-    <div class="min-w-0 flex-1 space-y-3">
-      <p
-        class="text-muted-foreground px-1 text-[11px] font-semibold uppercase tracking-[0.14em] opacity-90"
-      >
-        {workspaceLabel}
-      </p>
-      {#key data.note.id}
-        <NoteTitleField
-          noteId={data.note.id}
-          initialTitle={data.note.title ?? ""}
-          onSaveStatus={(s: "idle" | "saving" | "saved" | "error") => {
-            saveStatus = s;
-          }}
-        />
-      {/key}
+    <div class="flex w-full flex-wrap items-start justify-between gap-3">
+      <div class="min-w-0 flex-1 space-y-3">
+        <p
+          class="text-muted-foreground px-1 text-[11px] font-semibold uppercase tracking-[0.14em] opacity-90"
+        >
+          {workspaceLabel}
+        </p>
+        {#key data.note.id}
+          <NoteTitleField
+            noteId={data.note.id}
+            initialTitle={data.note.title ?? ""}
+            onSaveStatus={(s: "idle" | "saving" | "saved" | "error") => {
+              saveStatus = s;
+            }}
+          />
+        {/key}
+      </div>
+      <DeleteNoteDialog
+        noteId={data.note.id}
+        noteTitle={data.note.title ?? ""}
+        redirectHref={afterDeleteHref}
+      />
     </div>
   </header>
 
