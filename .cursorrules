@@ -51,6 +51,7 @@ AI runs on the user’s hardware. Code must handle **loading**, **processing**, 
 ## 6. Repo anchors (implementation)
 
 - Drizzle schema: `src/lib/server/db/schema.ts` (`projects`, `notes`, `note_links`, strict `Project` / `Note` types).
+- Active workspace context: `ActiveProjectRoot` + `tryGetActiveProject()` in `src/lib/workspace/active-project-api.ts` (General vs `/project/[projectId]` — drive AI/RAG filters from this).
 - PowerSync bucket rules: `powersync/sync-rules.yaml` (filter by `owner_id`; partition notes by `project_id` vs General).
 - ElectricSQL: mirror the same predicates in shape `where` clauses when wiring the client.
 

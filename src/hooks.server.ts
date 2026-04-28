@@ -69,7 +69,13 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
   const session = await event.locals.auth();
   const path = event.url.pathname;
 
-  if (path.startsWith("/projects") || path.startsWith("/ai") || path.startsWith("/telemetry")) {
+  if (
+    path.startsWith("/projects") ||
+    path.startsWith("/project/") ||
+    path.startsWith("/inbox") ||
+    path.startsWith("/ai") ||
+    path.startsWith("/telemetry")
+  ) {
     if (!session) {
       throw redirect(303, "/login");
     }

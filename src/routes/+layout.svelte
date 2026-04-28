@@ -7,6 +7,7 @@
   import Sidebar from "$lib/components/layout/sidebar.svelte";
   import NotificationPopover from "$lib/components/layout/notification-popover.svelte";
   import ImpersonationBanner from "$lib/components/layout/impersonation-banner.svelte";
+  import ActiveProjectRoot from "$lib/components/layout/active-project-root.svelte";
   import { page } from "$app/stores";
 
   let { children } = $props();
@@ -15,8 +16,9 @@
 </script>
 
 <SidebarProvider>
-  <Sidebar />
-  <main class="relative flex min-h-screen w-full flex-col bg-background">
+  <ActiveProjectRoot>
+    <Sidebar />
+    <main class="bg-background relative flex min-h-screen w-full flex-col">
     {#if impersonationSession?.impersonating && impersonationSession.user}
       <ImpersonationBanner
         targetEmail={impersonationSession.user.email}
@@ -53,4 +55,5 @@
       {@render children()}
     </div>
   </main>
+  </ActiveProjectRoot>
 </SidebarProvider>
