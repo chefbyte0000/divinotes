@@ -1,62 +1,93 @@
 <script lang="ts">
   import { page } from "$app/stores";
-  import { LayoutDashboard, FolderRoot, Settings, Plus } from "@lucide/svelte";
-  import { cn } from "$lib/utils";
-  import * as Tooltip from "$lib/components/ui/tooltip";
-  import { Separator } from "$lib/components/ui/separator";
-  import { Button } from "$lib/components/ui/button";
+  import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import NavItem from "./nav-item.svelte";
+  import NavUser from "./nav-user.svelte"; // Import the new component
+  import {
+    Home,
+    FolderGit2,
+    BrainCircuit,
+    Settings,
+    Orbit,
+    ActivitySquare,
+    ShieldCheck,
+    Users,
+    Database,
+  } from "@lucide/svelte";
 
-  let { class: className } = $props();
+  let sessionUser = $derived($page.data.session?.user);
+  let user = $derived({
+    name: sessionUser?.name ?? "Loading...",
+    email: sessionUser?.email ?? "No email found",
+    avatar: sessionUser?.image ?? "",
+  });
 
-  const navItems = [
-    { name: "General", href: "/", icon: LayoutDashboard },
-    { name: "Projects", href: "/projects", icon: FolderRoot },
+  const workspaceItems = [
+    { title: "General Workspace", url: "/", icon: Home },
+    { title: "Projects", url: "/projects", icon: FolderGit2 },
+    { title: "Local AI Engine", url: "/ai", icon: BrainCircuit },
+    { title: "Habit Telemetry", url: "/telemetry", icon: ActivitySquare },
+  ];
+
+  const adminItems = [
+    { title: "Access Control", url: "/admin/roles", icon: ShieldCheck },
+    { title: "User Directory", url: "/admin/users", icon: Users },
+    { title: "System Logs", url: "/admin/logs", icon: Database },
+    { title: "Settings", url: "/settings", icon: Settings },
   ];
 </script>
 
-<aside class={cn("flex h-full flex-col border-r bg-card px-3 py-4", className)}>
-  <div class="mb-6 flex items-center justify-between px-2">
-    <span class="text-xl font-bold tracking-tight text-primary">DiviNotes</span>
-    <Tooltip.Root>
-      <Tooltip.Trigger asChild>
-        <Button variant="outline" size="icon" class="size-8" href="/new">
-          <Plus class="size-4" />
-        </Button>
-      </Tooltip.Trigger>
-      <Tooltip.Content>New Note</Tooltip.Content>
-    </Tooltip.Root>
-  </div>
-
-  <nav class="flex flex-1 flex-col gap-2">
-    {#each navItems as item}
-      <Button
-        variant={$page.url.pathname === item.href ? "secondary" : "ghost"}
-        href={item.href}
-        class="justify-start gap-3"
+<Sidebar.Root class="border-r border-border bg-sidebar text-sidebar-foreground">
+  <Sidebar.Header class="p-4">
+    <div class="flex items-center gap-3 font-bold tracking-tight">
+      <div
+        class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm"
       >
-        <item.icon class="size-4" />
-        {item.name}
-      </Button>
-    {/each}
-
-    <Separator class="my-2" />
-
-    <div
-      class="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-    >
-      Recent Projects
+        <Orbit
+          class="h-5 w-5 text-primary-foreground animate-[spin_12s_linear_infinite]"
+        />
+      </div>
+      <span class="truncate text-lg">Divinotion</span>
     </div>
-    <!-- This will be dynamic later -->
-    <Button variant="ghost" class="justify-start gap-3 font-normal italic">
-      No projects yet...
-    </Button>
-  </nav>
+  </Sidebar.Header>
 
-  <div class="mt-auto flex flex-col gap-2">
-    <Separator class="mb-2" />
-    <Button variant="ghost" class="justify-start gap-3">
-      <Settings class="size-4" />
-      Settings
-    </Button>
-  </div>
-</aside>
+  <Sidebar.Content class="px-3 pb-4">
+    <Sidebar.Group>
+      <Sidebar.GroupLabel
+        class="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+      >
+        Workspace
+      </Sidebar.GroupLabel>
+      <Sidebar.GroupContent>
+        <Sidebar.Menu class="space-y-0.5">
+          {#each workspaceItems as item}
+            <NavItem icon={item.icon} title={item.title} url={item.url} />
+          {/each}
+        </Sidebar.Menu>
+      </Sidebar.GroupContent>
+    </Sidebar.Group>
+
+    <Sidebar.Separator class="mx-3 my-4 opacity-40" />
+
+    <Sidebar.Group>
+      <Sidebar.GroupLabel
+        class="mb-2 px-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60"
+      >
+        Administration
+      </Sidebar.GroupLabel>
+      <Sidebar.GroupContent>
+        <Sidebar.Menu class="space-y-0.5">
+          {#each adminItems as item}
+            <NavItem icon={item.icon} title={item.title} url={item.url} />
+          {/each}
+        </Sidebar.Menu>
+      </Sidebar.GroupContent>
+    </Sidebar.Group>
+  </Sidebar.Content>
+
+  <Sidebar.Footer class="p-3">
+    <Sidebar.Menu>
+      <NavUser {user} />
+    </Sidebar.Menu>
+  </Sidebar.Footer>
+</Sidebar.Root>
