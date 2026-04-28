@@ -38,8 +38,10 @@
 		"@auth/core": "^0.34.3",
 		"@auth/drizzle-adapter": "^1.11.2",
 		"@auth/sveltekit": "^1.11.2",
+		"@tanstack/table-core": "^8.21.3",
 		"dotenv": "^17.4.2",
 		"drizzle-orm": "^0.45.2",
-		"pg": "^8.20.0"
+		"pg": "^8.20.0",
+		"tanstack-table-8-svelte-5": "^0.1.2"
 	}
 }
