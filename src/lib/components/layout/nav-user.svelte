@@ -3,13 +3,13 @@
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import AccountDataDialog from "$lib/components/export/account-data-dialog.svelte";
+  import { goto } from "$app/navigation";
   import {
     Archive,
     ChevronsUpDown,
     LogOut,
-    BadgeCheck,
-    CreditCard,
     BrainCircuit,
+    Settings,
   } from "@lucide/svelte";
 
   let {
@@ -78,36 +78,35 @@
 
       <DropdownMenu.Separator />
 
-      <!-- Epic 4: Local AI Engine Status Inset -->
-      <div
-        class="mx-1 my-1.5 rounded-lg border border-border/50 bg-muted/30 p-2.5 transition-colors hover:bg-muted/50"
+      <button
+        type="button"
+        class="border-border/50 bg-muted/30 hover:bg-muted/50 mx-1 my-1.5 flex w-[calc(100%-0.5rem)] rounded-lg border p-2.5 text-left transition-colors"
+        onclick={() => goto("/settings?tab=local-ai")}
       >
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-2">
           <div class="flex flex-col gap-0.5">
-            <span class="text-xs font-semibold text-foreground"
-              >Local AI Engine</span
-            >
+            <span class="text-xs font-semibold text-foreground">Local AI</span>
             <span
-              class="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground"
+              class="text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium"
             >
               <span class="relative flex h-1.5 w-1.5 shrink-0">
                 <span
-                  class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"
+                  class="bg-primary/60 absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
                 ></span>
                 <span
-                  class="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500"
+                  class="bg-primary relative inline-flex h-1.5 w-1.5 rounded-full"
                 ></span>
               </span>
-              Gemma 8B (WebGPU)
+              WebGPU · models &amp; download
             </span>
           </div>
           <div
-            class="flex h-7 w-7 items-center justify-center rounded-md bg-background shadow-sm border border-border/40"
+            class="border-border/40 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background shadow-sm"
           >
-            <BrainCircuit class="h-3.5 w-3.5 text-primary" />
+            <BrainCircuit class="text-primary h-3.5 w-3.5" />
           </div>
         </div>
-      </div>
+      </button>
 
       <DropdownMenu.Separator />
 
@@ -116,13 +115,9 @@
           <Archive class="h-4 w-4 text-muted-foreground" />
           Data & privacy
         </DropdownMenu.Item>
-        <DropdownMenu.Item class="gap-2 rounded-md">
-          <BadgeCheck class="h-4 w-4 text-muted-foreground" />
-          Account Settings
-        </DropdownMenu.Item>
-        <DropdownMenu.Item class="gap-2 rounded-md">
-          <CreditCard class="h-4 w-4 text-muted-foreground" />
-          Subscription (Standard)
+        <DropdownMenu.Item class="gap-2 rounded-md" onclick={() => goto("/settings")}>
+          <Settings class="h-4 w-4 text-muted-foreground" />
+          Settings
         </DropdownMenu.Item>
       </DropdownMenu.Group>
 
