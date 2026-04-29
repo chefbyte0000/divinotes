@@ -4,13 +4,7 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
   import AccountDataDialog from "$lib/components/export/account-data-dialog.svelte";
   import { goto } from "$app/navigation";
-  import {
-    Archive,
-    ChevronsUpDown,
-    LogOut,
-    BrainCircuit,
-    Settings,
-  } from "@lucide/svelte";
+  import { Archive, BrainCircuit, ChevronsUpDown, LogOut, Settings } from "@lucide/svelte";
 
   let {
     user,
@@ -78,39 +72,11 @@
 
       <DropdownMenu.Separator />
 
-      <button
-        type="button"
-        class="border-border/50 bg-muted/30 hover:bg-muted/50 mx-1 my-1.5 flex w-[calc(100%-0.5rem)] rounded-lg border p-2.5 text-left transition-colors"
-        onclick={() => goto("/settings?tab=local-ai")}
-      >
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex flex-col gap-0.5">
-            <span class="text-xs font-semibold text-foreground">Local AI</span>
-            <span
-              class="text-muted-foreground flex items-center gap-1.5 text-[10px] font-medium"
-            >
-              <span class="relative flex h-1.5 w-1.5 shrink-0">
-                <span
-                  class="bg-primary/60 absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
-                ></span>
-                <span
-                  class="bg-primary relative inline-flex h-1.5 w-1.5 rounded-full"
-                ></span>
-              </span>
-              WebGPU · models &amp; download
-            </span>
-          </div>
-          <div
-            class="border-border/40 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border bg-background shadow-sm"
-          >
-            <BrainCircuit class="text-primary h-3.5 w-3.5" />
-          </div>
-        </div>
-      </button>
-
-      <DropdownMenu.Separator />
-
       <DropdownMenu.Group>
+        <DropdownMenu.Item class="gap-2 rounded-md" onclick={() => goto("/settings?tab=local-ai")}>
+          <BrainCircuit class="h-4 w-4 text-muted-foreground" />
+          Local AI
+        </DropdownMenu.Item>
         <DropdownMenu.Item class="gap-2 rounded-md" onclick={() => (accountDataOpen = true)}>
           <Archive class="h-4 w-4 text-muted-foreground" />
           Data & privacy

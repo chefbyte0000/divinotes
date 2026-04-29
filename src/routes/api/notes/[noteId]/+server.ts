@@ -14,16 +14,18 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 	const payload = (await request.json()) as {
 		content?: JSONContent;
 		title?: string;
+		description?: string;
 		metadata?: Partial<NoteMetadata>;
 	};
 
 	const hasContent = payload.content !== undefined;
 	const hasTitle = typeof payload.title === "string";
+	const hasDescription = typeof payload.description === "string";
 	const hasMetadata =
 		payload.metadata !== undefined && payload.metadata !== null && typeof payload.metadata === "object";
 
-	if (!hasContent && !hasTitle && !hasMetadata) {
-		error(400, "Provide title, content, and/or metadata");
+	if (!hasContent && !hasTitle && !hasDescription && !hasMetadata) {
+		error(400, "Provide title, description, content, and/or metadata");
 	}
 
 	const [note] = await db
@@ -41,6 +43,7 @@ export const PATCH: RequestHandler = async ({ params, request, locals }) => {
 		.update(notesTable)
 		.set({
 			...(hasTitle ? { title: payload.title!.trim() || "Untitled note" } : {}),
+			...(hasDescription ? { description: payload.description!.trim() } : {}),
 			...(hasContent ? { body: JSON.stringify(payload.content) } : {}),
 			...(mergedMetadata !== undefined ? { metadata: mergedMetadata } : {}),
 			updatedAt: new Date(),

@@ -10,6 +10,8 @@
   } from "$lib/ai/note-summarize";
   import { jsonContentToPlainText } from "$lib/tiptap/json-content-to-plain-text";
   import { detectWebGpu } from "$lib/ai/webgpu-detector";
+  import { markdownToSafeHtml } from "$lib/tiptap/markdown-paste";
+  import { toast } from "$lib/toasts/toast";
   import { Sparkles, LoaderCircle, Copy, CornerDownLeft } from "@lucide/svelte";
 
   let {
@@ -45,20 +47,8 @@
     }
   });
 
-  function escapeHtml(s: string): string {
-    return s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   function summaryToEditorHtml(text: string): string {
-    const chunks = text.split(/\n\n+/).filter(Boolean);
-    const body =
-      chunks.length > 0
-        ? chunks.map((c) => `<p>${escapeHtml(c).replace(/\n/g, "<br>")}</p>`).join("")
-        : `<p>${escapeHtml(text)}</p>`;
+    const body = markdownToSafeHtml(text.trim());
     return `<h2>AI summary</h2>${body}`;
   }
 
@@ -140,8 +130,9 @@
     if (!summary) return;
     try {
       await navigator.clipboard.writeText(summary);
+      toast("Summary copied to clipboard.", { variant: "success" });
     } catch {
-      /* ignore */
+      toast("Could not copy to clipboard.", { variant: "destructive" });
     }
   }
 

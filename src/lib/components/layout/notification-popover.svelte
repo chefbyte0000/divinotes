@@ -1,72 +1,70 @@
 <script lang="ts">
   import * as Popover from "$lib/components/ui/popover/index.js";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import {
-    Bell,
-    BrainCircuit,
-    CheckCircle2,
-    AlertCircle,
-    ActivitySquare,
-    Check,
-  } from "@lucide/svelte";
+  import { Button, buttonVariants } from "$lib/components/ui/button/index.js";
+  import { invalidateAll } from "$app/navigation";
+  import { page } from "$app/state";
+  import { Bell, Megaphone, Info, AlertTriangle, Clock, Check } from "@lucide/svelte";
+  import { cn } from "$lib/utils.js";
+  import type { NotificationKind } from "$lib/types/notifications";
 
-  // Mock data reflecting your Epics (Local AI, Sync, Telemetry)
-  let notifications = $state([
-    {
-      id: 1,
-      title: "WebGPU Ready",
-      description:
-        "Gemma 8B has been successfully loaded into memory and is ready for offline inference.",
-      time: "Just now",
-      unread: true,
-      icon: BrainCircuit,
-      colorClass: "text-emerald-500",
-      bgClass: "bg-emerald-500/10",
-    },
-    {
-      id: 2,
-      title: "Habit Detected",
-      description:
-        "You usually draft a 'Morning Routine' list around this time. Should I prepare one?",
-      time: "2 hours ago",
-      unread: true,
-      icon: ActivitySquare,
-      colorClass: "text-primary",
-      bgClass: "bg-primary/10",
-    },
-    {
-      id: 3,
-      title: "Sync Completed",
-      description:
-        "All offline edits across 3 projects have been securely pushed to your cloud database.",
-      time: "5 hours ago",
-      unread: false,
-      icon: CheckCircle2,
-      colorClass: "text-blue-500",
-      bgClass: "bg-blue-500/10",
-    },
-    {
-      id: 4,
-      title: "Storage Warning",
-      description:
-        "Local IndexedDB is approaching 80% capacity. Consider clearing older unpinned notes.",
-      time: "1 day ago",
-      unread: false,
-      icon: AlertCircle,
-      colorClass: "text-amber-500",
-      bgClass: "bg-amber-500/10",
-    },
-  ]);
+  let open = $state(false);
 
-  // Reactive derived state for the red badge
-  let unreadCount = $derived(notifications.filter((n) => n.unread).length);
+  let bell = $derived(page.data.notificationBell ?? { unreadCount: 0, preview: [] });
 
-  function markAllAsRead() {
-    notifications = notifications.map((n) => ({ ...n, unread: false }));
+  function kindIcon(kind: NotificationKind) {
+    switch (kind) {
+      case "announcement":
+        return Megaphone;
+      case "information":
+        return Info;
+      case "alert":
+        return AlertTriangle;
+      case "reminder":
+        return Clock;
+      default:
+        return Bell;
+    }
+  }
+
+  function kindRing(kind: NotificationKind) {
+    switch (kind) {
+      case "alert":
+        return "ring-destructive/25 bg-destructive/10";
+      case "announcement":
+        return "ring-primary/25 bg-primary/10";
+      case "reminder":
+        return "ring-amber-500/25 bg-amber-500/10";
+      default:
+        return "ring-border bg-muted/50";
+    }
+  }
+
+  function formatTime(iso: string | null) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    if (diffMs < 60_000) return "Just now";
+    if (diffMs < 3600_000) return `${Math.floor(diffMs / 60_000)}m ago`;
+    if (diffMs < 86400_000) return `${Math.floor(diffMs / 3600_000)}h ago`;
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  async function markAllRead() {
+    if (!page.data.session?.user?.id) return;
+    const fd = new FormData();
+    const r = await fetch("/api/notifications/mark-all-read", { method: "POST", body: fd });
+    if (r.ok) await invalidateAll();
+  }
+
+  async function markOneRead(id: string) {
+    if (!page.data.session?.user?.id) return;
+    const r = await fetch(`/api/notifications/${id}/read`, { method: "POST" });
+    if (r.ok) await invalidateAll();
   }
 </script>
 
-<Popover.Root>
+<Popover.Root bind:open>
   <Popover.Trigger>
     {#snippet child({ props })}
       <Button
@@ -77,15 +75,12 @@
       >
         <Bell class="h-6 w-6" />
 
-        {#if unreadCount > 0}
-          <!-- Pulsing dot for unread notifications -->
+        {#if bell.unreadCount > 0}
           <span class="absolute right-2 top-2 flex h-2.5 w-2.5">
             <span
               class="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-75"
             ></span>
-            <span
-              class="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive"
-            ></span>
+            <span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive"></span>
           </span>
         {/if}
         <span class="sr-only">Toggle notifications</span>
@@ -93,88 +88,77 @@
     {/snippet}
   </Popover.Trigger>
 
-  <!-- Using w-96 for a wide, highly legible layout -->
   <Popover.Content class="w-96 p-0 shadow-lg" align="end" sideOffset={8}>
-    <!-- Header -->
-    <div
-      class="flex items-center justify-between border-b border-border px-4 py-3"
-    >
+    <div class="border-border flex items-center justify-between border-b px-4 py-3">
       <div class="flex items-center gap-2">
         <span class="text-lg font-bold text-foreground">Notifications</span>
-        {#if unreadCount > 0}
+        {#if bell.unreadCount > 0}
           <span
-            class="flex h-5 items-center justify-center rounded-full bg-primary px-2 text-xs font-bold text-primary-foreground"
+            class="bg-primary text-primary-foreground flex h-5 items-center justify-center rounded-full px-2 text-xs font-bold"
           >
-            {unreadCount}
+            {bell.unreadCount}
           </span>
         {/if}
       </div>
       <Button
         variant="ghost"
         size="sm"
-        class="h-8 gap-1.5 text-xs text-muted-foreground"
-        onclick={markAllAsRead}
+        class="text-muted-foreground h-8 gap-1.5 text-xs"
+        onclick={() => void markAllRead()}
+        disabled={bell.unreadCount === 0}
       >
         <Check class="h-3.5 w-3.5" />
         Mark all read
       </Button>
     </div>
 
-    <!-- Scrollable Feed -->
     <div class="max-h-112.5 overflow-y-auto overflow-x-hidden">
-      {#if notifications.length === 0}
-        <div
-          class="flex flex-col items-center justify-center py-10 text-center text-muted-foreground"
-        >
+      {#if bell.preview.length === 0}
+        <div class="text-muted-foreground flex flex-col items-center justify-center py-10 text-center">
           <Bell class="mb-2 h-8 w-8 opacity-20" />
-          <p class="text-sm font-medium">No new notifications</p>
+          <p class="text-sm font-medium">No notifications yet</p>
         </div>
       {:else}
         <div class="flex flex-col">
-          {#each notifications as item (item.id)}
-            <!-- 
-							Large hit areas, generous padding, and a subtle background shift on hover.
-							The layout ensures text is large enough to read instantly. 
-						-->
+          {#each bell.preview as item (item.id)}
             <button
-              class="group relative flex w-full items-start gap-4 border-b border-border/40 p-4 text-left transition-colors hover:bg-muted/50 last:border-0"
+              type="button"
+              class="group border-border/40 hover:bg-muted/50 relative flex w-full items-start gap-4 border-b p-4 text-left transition-colors last:border-0"
+              onclick={() => {
+                if (!item.readAt) void markOneRead(item.id);
+              }}
             >
-              <!-- Unread Indicator Pip -->
-              {#if item.unread}
-                <div
-                  class="absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-primary"
-                ></div>
+              {#if !item.readAt}
+                <div class="bg-primary absolute left-1.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full"></div>
               {/if}
 
-              <!-- Large Icon Container -->
               <div
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full {item.bgClass}"
+                class={cn(
+                  "flex h-11 w-11 shrink-0 items-center justify-center rounded-full ring-1 ring-inset",
+                  kindRing(item.kind),
+                )}
               >
-                <item.icon class="h-5 w-5 {item.colorClass}" />
+                {#each [item.kind] as kind}
+                  {@const Icon = kindIcon(kind)}
+                  <Icon class="text-foreground h-5 w-5" />
+                {/each}
               </div>
 
-              <!-- Text Content -->
-              <div class="flex flex-col gap-1">
+              <div class="min-w-0 flex-1 space-y-1">
                 <div class="flex items-baseline justify-between gap-2">
                   <span
-                    class="text-base font-semibold text-foreground {item.unread
-                      ? ''
-                      : 'text-muted-foreground'}"
+                    class={cn(
+                      "text-base font-semibold leading-snug",
+                      !item.readAt ? "text-foreground" : "text-muted-foreground",
+                    )}
                   >
                     {item.title}
                   </span>
-                  <span
-                    class="shrink-0 text-[11px] font-medium text-muted-foreground/70"
-                  >
-                    {item.time}
+                  <span class="text-muted-foreground shrink-0 text-[11px] font-medium opacity-80">
+                    {formatTime(item.createdAt)}
                   </span>
                 </div>
-                <!-- line-clamp-2 ensures the description doesn't break the layout if it gets too long -->
-                <p
-                  class="text-sm leading-relaxed text-muted-foreground line-clamp-2"
-                >
-                  {item.description}
-                </p>
+                <p class="text-muted-foreground line-clamp-2 text-sm leading-relaxed">{item.body}</p>
               </div>
             </button>
           {/each}
@@ -182,13 +166,16 @@
       {/if}
     </div>
 
-    <div class="border-t border-border p-2">
-      <Button
-        variant="ghost"
-        class="w-full text-sm font-medium text-muted-foreground hover:text-foreground"
+    <div class="border-border border-t p-2">
+      <a
+        href="/notifications"
+        class={cn(buttonVariants({ variant: "ghost" }), "text-muted-foreground hover:text-foreground h-9 w-full")}
+        onclick={() => {
+          open = false;
+        }}
       >
-        View all system logs
-      </Button>
+        View all notifications
+      </a>
     </div>
   </Popover.Content>
 </Popover.Root>

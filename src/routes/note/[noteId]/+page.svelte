@@ -3,7 +3,9 @@
   import { page } from "$app/state";
   import NoteEditor from "$lib/components/editor/note-editor.svelte";
   import NoteTitleField from "$lib/components/editor/note-title-field.svelte";
-  import DeleteNoteDialog from "$lib/components/editor/delete-note-dialog.svelte";
+  import NoteDescriptionField from "$lib/components/editor/note-description-field.svelte";
+  import NoteTagsField from "$lib/components/editor/note-tags-field.svelte";
+  import { currentNotePlainText } from "$lib/editor/note-plaintext-bus";
   import GeneralProjectSuggestionBanner from "$lib/components/editor/general-project-suggestion-banner.svelte";
   import NudgeBanner from "$lib/components/nudge/NudgeBanner.svelte";
   import Backlinks from "$lib/components/editor/backlinks.svelte";
@@ -77,20 +79,36 @@
           {workspaceLabel}
         </p>
         {#key data.note.id}
-          <NoteTitleField
-            noteId={data.note.id}
-            initialTitle={data.note.title ?? ""}
-            onSaveStatus={(s: "idle" | "saving" | "saved" | "error") => {
-              saveStatus = s;
-            }}
-          />
+          <div class="space-y-1">
+            <NoteTitleField
+              noteId={data.note.id}
+              initialTitle={data.note.title ?? ""}
+              getPlainText={currentNotePlainText}
+              onSaveStatus={(s: "idle" | "saving" | "saved" | "error") => {
+                saveStatus = s;
+              }}
+            />
+            <NoteDescriptionField
+              noteId={data.note.id}
+              noteTitle={data.note.title ?? ""}
+              initialDescription={data.note.description ?? ""}
+              getPlainText={currentNotePlainText}
+              onSaveStatus={(s: "idle" | "saving" | "saved" | "error") => {
+                saveStatus = s;
+              }}
+            />
+            <NoteTagsField
+              noteId={data.note.id}
+              noteTitle={data.note.title ?? ""}
+              initialTags={data.note.metadata?.tags ?? []}
+              getPlainText={currentNotePlainText}
+              onSaveStatus={(s: "idle" | "saving" | "saved" | "error") => {
+                saveStatus = s;
+              }}
+            />
+          </div>
         {/key}
       </div>
-      <DeleteNoteDialog
-        noteId={data.note.id}
-        noteTitle={data.note.title ?? ""}
-        redirectHref={afterDeleteHref}
-      />
     </div>
   </header>
 
@@ -115,6 +133,7 @@
       projectId={data.note.projectId}
       initialDoc={initialDoc}
       noteTitle={data.note.title ?? ""}
+      redirectHref={afterDeleteHref}
       syncStatus={saveStatus}
       onSaveStatus={(s) => {
         saveStatus = s;

@@ -17,6 +17,14 @@ import type { AdapterAccount } from "@auth/core/adapters";
 
 export const roleEnum = pgEnum("role", ["admin", "premium", "standard"]);
 
+/** Admin-authored system messages; user copies live in `user_notifications`. */
+export const notificationKindEnum = pgEnum("notification_kind", [
+	"announcement",
+	"information",
+	"alert",
+	"reminder",
+]);
+
 export const users = pgTable("user", {
 	id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
 	name: text("name"),
@@ -86,6 +94,8 @@ export const notes = pgTable(
 		/** Nullable: `NULL` = note lives in the implicit "General" workspace (no project). */
 		projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
 		title: text("title").notNull().default(""),
+		/** Short plain-text blurb under the title (not JSON metadata). */
+		description: text("description").notNull().default(""),
 		body: text("body"),
 		metadata: jsonb("metadata").$type<NoteMetadata>().notNull().default({}),
 		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
@@ -186,3 +196,94 @@ export const aiPersonas = pgTable(
 
 export type AiPersona = InferSelectModel<typeof aiPersonas>;
 export type NewAiPersona = InferInsertModel<typeof aiPersonas>;
+
+/** v1 audience spec — extend with new `scope` values without breaking old rows. */
+export type NotificationAudienceV1 =
+	| { version: 1; scope: "all" }
+	| { version: 1; scope: "roles"; roles: ("admin" | "premium" | "standard")[] }
+	| { version: 1; scope: "users"; userIds: string[] }
+	| { version: 1; scope: "group"; groupId: string };
+
+/** v1 schedule — `once` delivers immediately; `recurring` uses UTC slot fields. */
+export type NotificationScheduleV1 =
+	| { version: 1; mode: "once" }
+	| {
+			version: 1;
+			mode: "recurring";
+			interval: "daily" | "weekly" | "monthly";
+			hourUtc: number;
+			minuteUtc: number;
+			/** weekly: 0 = Sunday … 6 = Saturday (UTC) */
+			weekdayUtc?: number;
+			/** monthly: 1–28 (clamped to month length at fire time) */
+			dayOfMonth?: number;
+	  };
+
+export const notificationGroups = pgTable(
+	"notification_groups",
+	{
+		id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+		name: text("name").notNull(),
+		memberUserIds: jsonb("member_user_ids").$type<string[]>().notNull().default([]),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(t) => [index("notification_groups_name_idx").on(t.name)],
+);
+
+export const notificationCampaigns = pgTable(
+	"notification_campaigns",
+	{
+		id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+		title: text("title").notNull(),
+		body: text("body").notNull(),
+		kind: notificationKindEnum("kind").notNull(),
+		audience: jsonb("audience").$type<NotificationAudienceV1>().notNull(),
+		schedule: jsonb("schedule").$type<NotificationScheduleV1>().notNull(),
+		isRecurring: boolean("is_recurring").notNull().default(false),
+		nextFireAt: timestamp("next_fire_at", { mode: "date" }),
+		lastFiredAt: timestamp("last_fired_at", { mode: "date" }),
+		isActive: boolean("is_active").notNull().default(true),
+		lastRecipientCount: integer("last_recipient_count"),
+		createdByUserId: text("created_by_user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "restrict" }),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(t) => [
+		index("notification_campaigns_active_next_fire_idx").on(t.isActive, t.nextFireAt),
+		index("notification_campaigns_created_by_idx").on(t.createdByUserId),
+	],
+);
+
+export const userNotifications = pgTable(
+	"user_notifications",
+	{
+		id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		campaignId: text("campaign_id").references(() => notificationCampaigns.id, {
+			onDelete: "set null",
+		}),
+		title: text("title").notNull(),
+		body: text("body").notNull(),
+		kind: notificationKindEnum("kind").notNull(),
+		readAt: timestamp("read_at", { mode: "date" }),
+		linkUrl: text("link_url"),
+		payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(t) => [
+		index("user_notifications_user_created_idx").on(t.userId, t.createdAt),
+		index("user_notifications_user_unread_idx").on(t.userId, t.readAt),
+	],
+);
+
+export type NotificationGroup = InferSelectModel<typeof notificationGroups>;
+export type NewNotificationGroup = InferInsertModel<typeof notificationGroups>;
+export type NotificationCampaign = InferSelectModel<typeof notificationCampaigns>;
+export type NewNotificationCampaign = InferInsertModel<typeof notificationCampaigns>;
+export type UserNotification = InferSelectModel<typeof userNotifications>;
+export type NewUserNotification = InferInsertModel<typeof userNotifications>;

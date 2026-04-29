@@ -29,6 +29,7 @@ export async function getProjectContext(
 	const rows = await db
 		.select({
 			title: notesTable.title,
+			description: notesTable.description,
 			body: notesTable.body,
 		})
 		.from(notesTable)
@@ -40,7 +41,8 @@ export async function getProjectContext(
 		const doc = parseNoteBody(row.body);
 		const plain = jsonContentToPlainText(doc);
 		const title = (row.title ?? "").trim() || "Untitled note";
-		const block = [title, plain].filter((s) => s.length > 0).join("\n\n");
+		const desc = (row.description ?? "").trim();
+		const block = [title, desc, plain].filter((s) => s.length > 0).join("\n\n");
 		segments.push(block);
 	}
 

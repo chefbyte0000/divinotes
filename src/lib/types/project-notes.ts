@@ -9,6 +9,7 @@ export type ProjectNoteMetadata = {
 export type ProjectNoteRow = {
 	id: string;
 	title: string;
+	description: string;
 	updatedAt: string | Date;
 	metadata: ProjectNoteMetadata;
 };

@@ -1,7 +1,7 @@
 import { json } from "@sveltejs/kit";
 import { db } from "$lib/server/db";
 import { notes as notesTable } from "$lib/server/db/schema";
-import { and, desc, eq, ilike, isNull, ne } from "drizzle-orm";
+import { and, desc, eq, ilike, isNull, ne, or } from "drizzle-orm";
 import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ url, locals }) => {
@@ -22,7 +22,9 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	}
 
 	if (q.length > 0) {
-		filters.push(ilike(notesTable.title, `%${q}%`));
+		filters.push(
+			or(ilike(notesTable.title, `%${q}%`), ilike(notesTable.description, `%${q}%`))!,
+		);
 	}
 
 	const rows = await db

@@ -13,6 +13,7 @@ export type ProjectNoteSortMode = "alphabetical" | "created" | "manual";
 export type StitchedExportNote = {
 	id: string;
 	title: string;
+	description: string;
 	body: string | null;
 	metadata: ProjectNoteMetadata;
 	createdAt: string | Date;
@@ -65,11 +66,13 @@ export function sortNotesForExport(
 
 function metaLines(note: StitchedExportNote): string[] {
 	const tags = note.metadata.tags?.length ? note.metadata.tags.join(", ") : "";
+	const desc = note.description?.trim() ?? "";
 	const created =
 		note.createdAt instanceof Date ? note.createdAt.toISOString() : String(note.createdAt);
 	const updated =
 		note.updatedAt instanceof Date ? note.updatedAt.toISOString() : String(note.updatedAt);
 	const lines = [`Created: ${created}`, `Updated: ${updated}`];
+	if (desc) lines.push(`Description: ${desc}`);
 	if (tags) lines.push(`Tags: ${tags}`);
 	if (note.metadata.status) lines.push(`Status: ${note.metadata.status}`);
 	return lines;
@@ -94,6 +97,10 @@ export function stitchProjectToMarkdown(opts: StitchProjectOptions): string {
 	for (const n of sorted) {
 		const title = n.title.trim() || "Untitled note";
 		lines.push(`<a id="note-${n.id}"></a>`, "", `## ${title}`, "");
+		const blurb = n.description?.trim() ?? "";
+		if (blurb) {
+			lines.push(blurb, "");
+		}
 		if (opts.includeMetadata) {
 			lines.push(...metaLines(n).map((l) => `*${l}*`), "");
 		}
@@ -143,6 +150,13 @@ export async function stitchProjectToBlob(opts: StitchProjectOptions): Promise<B
 				content: [{ type: "text", text: n.title.trim() || "Untitled note" }],
 			},
 		];
+		const exportDesc = n.description?.trim() ?? "";
+		if (exportDesc) {
+			blocks.push({
+				type: "paragraph",
+				content: [{ type: "text", text: exportDesc }],
+			});
+		}
 		if (opts.includeMetadata) {
 			blocks.push({
 				type: "paragraph",

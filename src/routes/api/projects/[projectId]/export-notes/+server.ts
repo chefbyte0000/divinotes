@@ -25,6 +25,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 		.select({
 			id: notesTable.id,
 			title: notesTable.title,
+			description: notesTable.description,
 			body: notesTable.body,
 			metadata: notesTable.metadata,
 			createdAt: notesTable.createdAt,

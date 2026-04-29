@@ -1,5 +1,6 @@
 import { mergeAttributes } from "@tiptap/core";
 import CharacterCount from "@tiptap/extension-character-count";
+import CodeBlock from "@tiptap/extension-code-block";
 import Highlight from "@tiptap/extension-highlight";
 import Link from "@tiptap/extension-link";
 import Mention from "@tiptap/extension-mention";
@@ -13,6 +14,7 @@ import Underline from "@tiptap/extension-underline";
 import { PluginKey } from "@tiptap/pm/state";
 
 import { createWikiSuggestionRenderer } from "./wiki-suggestion-controller";
+import { SlashCommands } from "./slash-command-extension";
 
 /** Shared TipTap bundle — block primitives, marks, wiki-links, and perf-friendly caps. */
 export function createNoteExtensions(opts: {
@@ -22,16 +24,11 @@ export function createNoteExtensions(opts: {
 	return [
 		StarterKit.configure({
 			heading: { levels: [1, 2, 3] },
+			codeBlock: false,
 			blockquote: {
 				HTMLAttributes: {
 					class:
 						"border-border text-muted-foreground my-4 border-l-[3px] pl-4 italic [&_p]:my-1",
-				},
-			},
-			codeBlock: {
-				HTMLAttributes: {
-					class:
-						"bg-muted/80 border-border my-4 rounded-lg border p-3 font-mono text-[13px] leading-relaxed",
 				},
 			},
 			code: {
@@ -48,6 +45,17 @@ export function createNoteExtensions(opts: {
 			},
 			dropcursor: { color: "var(--ring)", width: 2 },
 		}),
+		CodeBlock.configure({
+			defaultLanguage: null,
+			tabSize: 2,
+			enableTabIndentation: true,
+			languageClassPrefix: "language-",
+			HTMLAttributes: {
+				class:
+					"bg-muted/80 border-border my-4 rounded-lg border p-3 font-mono text-[13px] leading-relaxed",
+			},
+		}),
+		SlashCommands,
 		TextStyle,
 		TextAlign.configure({
 			types: ["heading", "paragraph"],
@@ -87,7 +95,7 @@ export function createNoteExtensions(opts: {
 		}),
 		Placeholder.configure({
 			placeholder:
-				"Start writing… Headings, lists, tasks, highlights — type [[ to link another note in this silo.",
+				"Start writing… Type / for blocks, [[ to link a note in this workspace.",
 		}),
 		Mention.configure({
 			HTMLAttributes: {

@@ -4,15 +4,23 @@
   import { TextSelection } from "@tiptap/pm/state";
 
   import EditorToolbar from "$lib/components/editor/editor-toolbar.svelte";
+  import NoteSummarizeTrigger from "$lib/components/editor/note-summarize-trigger.svelte";
+  import NoteEditorMoreMenu from "$lib/components/editor/note-editor-more-menu.svelte";
   import { queueNoteEmbeddingSync } from "$lib/ai/note-embedding-sync";
   import { createNoteExtensions } from "$lib/tiptap/note-extensions";
   import { jsonContentToPlainText } from "$lib/tiptap/json-content-to-plain-text";
+  import {
+    clipboardSmartPaste,
+    transformPastedHtmlSanitize,
+  } from "$lib/tiptap/clipboard-smart-paste";
+  import { registerNotePlainTextGetter } from "$lib/editor/note-plaintext-bus";
 
   let {
     noteId,
     projectId,
     initialDoc,
     noteTitle = "",
+    redirectHref,
     syncStatus,
     onSaveStatus,
   }: {
@@ -21,6 +29,8 @@
     initialDoc: JSONContent;
     /** Shown title for local AI summarize context */
     noteTitle?: string;
+    /** Where to go after Delete from the editor ⋯ menu */
+    redirectHref?: string;
     syncStatus?: "idle" | "saving" | "saved" | "error";
     onSaveStatus?: (s: "idle" | "saving" | "saved" | "error") => void;
   } = $props();
@@ -29,6 +39,7 @@
   let editor = $state<Editor | null>(null);
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let unregisterPlain: (() => void) | null = null;
 
   /** Toolbar / stats react to edits */
   let docTick = $state(0);
@@ -57,6 +68,7 @@
   onMount(() => {
     if (!host) return;
 
+    const editorRef = { current: null as Editor | null };
     const ed = new Editor({
       element: host,
       injectCSS: false,
@@ -66,6 +78,12 @@
       }),
       content: initialDoc,
       editorProps: {
+        handlePaste(_view, event) {
+          const target = editorRef.current;
+          if (!target) return false;
+          return clipboardSmartPaste(target, event as ClipboardEvent);
+        },
+        transformPastedHTML: transformPastedHtmlSanitize,
         handleClick(view, _pos, event) {
           const coords = view.posAtCoords({
             left: event.clientX,
@@ -108,10 +126,14 @@
       },
     });
 
+    editorRef.current = ed;
     editor = ed;
+    unregisterPlain = registerNotePlainTextGetter(() => jsonContentToPlainText(ed.getJSON()));
   });
 
   onDestroy(() => {
+    unregisterPlain?.();
+    unregisterPlain = null;
     if (debounceTimer) clearTimeout(debounceTimer);
     editor?.destroy();
     editor = null;
@@ -134,7 +156,20 @@
   class="tiptap-editor-root border-border bg-card text-card-foreground shadow-xs flex flex-col overflow-hidden rounded-2xl border"
 >
   {#if editor}
-    <EditorToolbar {editor} {noteTitle} />
+    <div
+      class="border-border bg-muted/30 flex min-w-0 items-stretch gap-0 border-b"
+      role="presentation"
+    >
+      <div class="min-w-0 flex-1 overflow-x-auto pt-1 pl-1 md:pl-1.5">
+        <EditorToolbar {editor} />
+      </div>
+      <div class="border-border/60 flex shrink-0 items-start gap-0 border-l pt-1 pr-1 md:pr-1.5">
+        <div class="flex shrink-0 items-start pt-0.5">
+          <NoteSummarizeTrigger {editor} {noteTitle} />
+        </div>
+        <NoteEditorMoreMenu {noteId} {noteTitle} {redirectHref} />
+      </div>
+    </div>
   {/if}
 
   <div class="relative min-h-0 flex-1">

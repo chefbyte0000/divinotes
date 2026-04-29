@@ -11,6 +11,7 @@
   import NavItem from "./nav-item.svelte";
   import NavUser from "./nav-user.svelte";
   import {
+    Bell,
     ChevronDown,
     ChevronRight,
     FolderKanban,
@@ -18,6 +19,7 @@
     Inbox,
     LayoutGrid,
     ListTodo,
+    Megaphone,
     Orbit,
     Plus,
     Users,
@@ -126,6 +128,12 @@
             title="Inbox"
             url="/inbox"
             isActive={pathname === "/inbox"}
+          />
+          <NavItem
+            icon={Bell}
+            title="Notifications"
+            url="/notifications"
+            isActive={pathname.startsWith("/notifications")}
           />
           <NavItem
             icon={LayoutGrid}
@@ -333,6 +341,12 @@
               title="AI personas"
               url="/admin/ai-personas"
               isActive={pathname.startsWith("/admin/ai-personas")}
+            />
+            <NavItem
+              icon={Megaphone}
+              title="Broadcasts"
+              url="/admin/notifications"
+              isActive={pathname.startsWith("/admin/notifications")}
             />
           </Sidebar.Menu>
         </Sidebar.GroupContent>

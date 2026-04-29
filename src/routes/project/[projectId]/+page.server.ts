@@ -24,6 +24,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		.select({
 			id: notesTable.id,
 			title: notesTable.title,
+			description: notesTable.description,
 			updatedAt: notesTable.updatedAt,
 			metadata: notesTable.metadata,
 		})

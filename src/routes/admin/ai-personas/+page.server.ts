@@ -1,5 +1,6 @@
 import { fail } from "@sveltejs/kit";
 import type { Actions, PageServerLoad } from "./$types";
+import type { AiPersonaConfig } from "$lib/types/ai-persona";
 import {
 	createAiPersona,
 	deleteAiPersona,
@@ -11,6 +12,22 @@ import {
 	updateAiPersona,
 	listAiPersonas,
 } from "$lib/server/ai-personas-service";
+
+function mergeConfigFromForm(
+	fd: FormData,
+	configRaw: string,
+): { ok: true; value: AiPersonaConfig } | { ok: false; error: string } {
+	const parsed = parseConfigJson(configRaw);
+	if (!parsed.ok) return parsed;
+	const strictJson = fd.get("strictJsonOutput") === "on";
+	const spec = String(fd.get("jsonOutputSpecification") ?? "").trim();
+	const merged: AiPersonaConfig = { ...parsed.value };
+	delete merged.strictJsonOutput;
+	delete merged.jsonOutputSpecification;
+	merged.strictJsonOutput = strictJson;
+	if (spec) merged.jsonOutputSpecification = spec;
+	return { ok: true, value: merged };
+}
 
 export const load: PageServerLoad = async () => {
 	const personas = await listAiPersonas();
@@ -49,7 +66,7 @@ export const actions: Actions = {
 		if (!name) return fail(400, { error: "Name is required." });
 		if (!systemPrompt) return fail(400, { error: "System prompt is required." });
 
-		const cfg = parseConfigJson(configRaw);
+		const cfg = mergeConfigFromForm(fd, configRaw);
 		if (!cfg.ok) return fail(400, { error: cfg.error });
 
 		try {
@@ -93,7 +110,7 @@ export const actions: Actions = {
 		if (!name) return fail(400, { error: "Name is required." });
 		if (!systemPrompt) return fail(400, { error: "System prompt is required." });
 
-		const cfg = parseConfigJson(configRaw);
+		const cfg = mergeConfigFromForm(fd, configRaw);
 		if (!cfg.ok) return fail(400, { error: cfg.error });
 
 		try {

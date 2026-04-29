@@ -1,14 +1,20 @@
 <script lang="ts">
   import { onDestroy, tick } from "svelte";
   import { invalidateAll } from "$app/navigation";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import { generateNoteAiTitle } from "$lib/ai/note-title-ai";
+  import { toast } from "$lib/toasts/toast";
+  import { Sparkles, LoaderCircle } from "@lucide/svelte";
 
   let {
     noteId,
     initialTitle,
+    getPlainText,
     onSaveStatus,
   }: {
     noteId: string;
     initialTitle: string;
+    getPlainText: () => string;
     onSaveStatus?: (s: "idle" | "saving" | "saved" | "error") => void;
   } = $props();
 
@@ -17,8 +23,13 @@
   let editing = $state(false);
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let aiBusy = $state(false);
 
   let inputEl = $state<HTMLInputElement | null>(null);
+
+  $effect(() => {
+    if (!editing) value = initialTitle;
+  });
 
   async function saveTitle(next: string) {
     onSaveStatus?.("saving");
@@ -69,12 +80,35 @@
     }
   }
 
+  async function runAiTitle() {
+    const plain = getPlainText();
+    if (!plain.trim()) {
+      toast("Add some note content first.");
+      return;
+    }
+    aiBusy = true;
+    try {
+      const next = await generateNoteAiTitle({
+        currentTitle: value.trim() || "Untitled note",
+        plainText: plain,
+      });
+      value = next;
+      await saveTitle(next.trim() === "" ? "Untitled note" : next.trim());
+      toast("Title updated.", { variant: "success" });
+    } catch (e) {
+      toast(e instanceof Error ? e.message : String(e), { variant: "destructive" });
+    } finally {
+      aiBusy = false;
+    }
+  }
+
   onDestroy(() => {
     if (debounceTimer) clearTimeout(debounceTimer);
   });
 </script>
 
-<div class="w-full min-w-0">
+<div class="flex w-full min-w-0 items-start gap-1.5 px-1">
+  <div class="min-w-0 flex-1">
   {#if !editing}
     <button
       type="button"
@@ -101,4 +135,20 @@
       />
     </label>
   {/if}
+  </div>
+  <Button
+    type="button"
+    variant="ghost"
+    size="icon-sm"
+    class="text-muted-foreground hover:text-foreground mt-0.5 size-8 shrink-0"
+    title="Suggest title with local AI"
+    disabled={aiBusy}
+    onclick={() => void runAiTitle()}
+  >
+    {#if aiBusy}
+      <LoaderCircle class="size-4 animate-spin" />
+    {:else}
+      <Sparkles class="size-4 opacity-80" />
+    {/if}
+  </Button>
 </div>

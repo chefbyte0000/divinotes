@@ -5,6 +5,10 @@
 export type AiPersonaConfig = {
 	suggestedTemperature?: number;
 	suggestedMaxTokens?: number;
+	/** When true, local inference appends strict JSON-only rules to the system prompt. */
+	strictJsonOutput?: boolean;
+	/** Optional JSON Schema, example JSON, or prose describing the exact output shape. */
+	jsonOutputSpecification?: string;
 	extensions?: Record<string, unknown>;
 };
 

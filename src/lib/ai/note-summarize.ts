@@ -4,6 +4,7 @@ import {
 	ensureInferenceModelLoaded,
 	getInferenceClient,
 } from "$lib/ai/inference-bootstrap";
+import { buildEffectiveSystemPrompt } from "$lib/ai/persona-system-prompt";
 
 export const NOTE_SUMMARIZER_PERSONA_SLUG = "note-summarizer";
 
@@ -36,21 +37,18 @@ function buildUserPrompt(noteTitle: string, plain: string): string {
 
 	if (!body) {
 		return [
-			`The user asked to summarize a note titled "${title}", but the note body has no extractable text yet.`,
-			`Reply in one or two short sentences: explain that there is nothing to summarize yet and suggest they write some content first.`,
+			`Summarize this note. Title: "${title}".`,
+			`The note body has no text yet.`,
 		].join("\n");
 	}
 
 	return [
-		`Summarize the following user note from their Divinotes workspace.`,
-		``,
 		`**Title:** ${title}`,
 		``,
-		`**Body (plain text extracted from the editor):**`,
+		`**Note text:**`,
 		body,
 		``,
-		`Respond in Markdown. Prefer a brief opener, then bullet takeaways when the content supports it; otherwise a tight paragraph.`,
-		`Preserve important names, numbers, and dates from the source. Do not invent facts.`,
+		`Respond in Markdown (paragraphs and/or bullets).`,
 	].join("\n");
 }
 
@@ -77,17 +75,21 @@ export async function summarizeNoteWithPersona(options: {
 
 	const cfg = options.persona.config ?? {};
 	const maxTokens =
-		typeof cfg.suggestedMaxTokens === "number" ? Math.min(cfg.suggestedMaxTokens, 2048) : 900;
+		typeof cfg.suggestedMaxTokens === "number" ? Math.min(cfg.suggestedMaxTokens, 2048) : 1200;
 	const temperature =
 		typeof cfg.suggestedTemperature === "number" ? cfg.suggestedTemperature : 0.35;
 
 	const userContent = buildUserPrompt(options.noteTitle, options.plainText);
+	const systemContent = buildEffectiveSystemPrompt(
+		options.persona.systemPrompt,
+		options.persona.config,
+	);
 	let out = "";
 
 	for await (const chunk of client.generateCompletion({
 		mode: "chat",
 		messages: [
-			{ role: "system", content: options.persona.systemPrompt },
+			{ role: "system", content: systemContent },
 			{ role: "user", content: userContent },
 		],
 		stream: true,

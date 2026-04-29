@@ -73,7 +73,8 @@ const authorizationHandle: Handle = async ({ event, resolve }) => {
     path.startsWith("/projects") ||
     path.startsWith("/project/") ||
     path.startsWith("/note/") ||
-    path.startsWith("/inbox")
+    path.startsWith("/inbox") ||
+    path.startsWith("/notifications")
   ) {
     if (!session) {
       throw redirect(303, "/login");

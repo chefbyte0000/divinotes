@@ -6,18 +6,22 @@
   import { Trash2 } from "@lucide/svelte";
 
   let {
+    open = $bindable(false),
     noteId,
     noteTitle = "",
     redirectHref,
     variant = "button",
+    hideTrigger = false,
   }: {
+    open?: boolean;
     noteId: string;
     noteTitle?: string;
     redirectHref?: string;
     variant?: "button" | "icon";
+    /** When true, only the dialog panel is rendered — parent opens via bind:open */
+    hideTrigger?: boolean;
   } = $props();
 
-  let open = $state(false);
   let deleting = $state(false);
 
   let label = $derived(noteTitle?.trim() ? noteTitle.trim() : "Untitled note");
@@ -39,22 +43,27 @@
 </script>
 
 <Dialog.Root bind:open>
-  {#if variant === "icon"}
-    <Dialog.Trigger
-      class={cn(
-        buttonVariants({ variant: "ghost", size: "icon-sm" }),
-        "text-muted-foreground hover:text-destructive shrink-0",
-      )}
-      aria-label="Delete note"
-    >
-      <Trash2 class="size-4" />
-    </Dialog.Trigger>
-  {:else}
-    <Dialog.Trigger
-      class={cn(buttonVariants({ variant: "outline", size: "sm" }), "border-destructive/40 text-destructive hover:bg-destructive/10")}
-    >
-      Delete note
-    </Dialog.Trigger>
+  {#if !hideTrigger}
+    {#if variant === "icon"}
+      <Dialog.Trigger
+        class={cn(
+          buttonVariants({ variant: "ghost", size: "icon-sm" }),
+          "text-muted-foreground hover:text-destructive shrink-0",
+        )}
+        aria-label="Delete note"
+      >
+        <Trash2 class="size-4" />
+      </Dialog.Trigger>
+    {:else}
+      <Dialog.Trigger
+        class={cn(
+          buttonVariants({ variant: "outline", size: "sm" }),
+          "border-destructive/40 text-destructive hover:bg-destructive/10",
+        )}
+      >
+        Delete note
+      </Dialog.Trigger>
+    {/if}
   {/if}
 
   <Dialog.Content class="sm:max-w-md" showCloseButton={!deleting}>

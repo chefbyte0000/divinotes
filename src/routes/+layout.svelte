@@ -1,5 +1,6 @@
 <script lang="ts">
   import "./layout.css";
+  import { onMount } from "svelte";
   import {
     SidebarProvider,
     SidebarTrigger,
@@ -10,11 +11,35 @@
   import HardwareWarning from "$lib/components/layout/hardware-warning.svelte";
   import ActiveProjectRoot from "$lib/components/layout/active-project-root.svelte";
   import ThemeToggle from "$lib/components/layout/theme-toggle.svelte";
+  import Toaster from "$lib/components/ui/toaster.svelte";
+  import { get } from "svelte/store";
   import { page } from "$app/stores";
+  import { invalidateAll } from "$app/navigation";
+  import { toast } from "$lib/toasts/toast";
 
   let { children } = $props();
 
   let impersonationSession = $derived($page.data.session);
+
+  onMount(() => {
+    const id = window.setInterval(async () => {
+      const p = get(page);
+      if (!p.data.session?.user?.id) return;
+      const baseline = p.data.notificationBell?.unreadCount ?? 0;
+      try {
+        const r = await fetch("/api/notifications/summary");
+        if (!r.ok) return;
+        const j = (await r.json()) as { unreadCount: number };
+        if (j.unreadCount > baseline) {
+          toast("You have new notifications", { variant: "info" });
+          await invalidateAll();
+        }
+      } catch {
+        // ignore network errors while polling
+      }
+    }, 90_000);
+    return () => window.clearInterval(id);
+  });
 </script>
 
 <svelte:head>
@@ -52,6 +77,8 @@
     <div class="flex-1 overflow-auto px-5 py-8 md:px-10 md:py-10 lg:px-14 lg:py-12">
       {@render children()}
     </div>
+
+    <Toaster />
   </main>
   </ActiveProjectRoot>
 </SidebarProvider>

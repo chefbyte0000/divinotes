@@ -23,6 +23,7 @@
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
   import Sparkles from "@lucide/svelte/icons/sparkles";
   import Cpu from "@lucide/svelte/icons/cpu";
+  import { toast } from "$lib/toasts/toast";
 
   type GpuState =
     | { status: "idle" }
@@ -136,9 +137,11 @@
         onProgress: scheduleProgress,
       });
       loadStage = "ready";
+      toast("Model ready — local AI features can use this engine.", { variant: "success" });
     } catch (e) {
       loadStage = "error";
       loadError = e instanceof Error ? e.message : String(e);
+      toast(loadError ?? "Could not load model.", { variant: "destructive" });
     }
   }
 
