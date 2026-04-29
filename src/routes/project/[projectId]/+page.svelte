@@ -1,6 +1,7 @@
 <script lang="ts">
   import { goto, invalidateAll } from "$app/navigation";
   import DeleteNoteDialog from "$lib/components/editor/delete-note-dialog.svelte";
+  import ProjectExportDialog from "$lib/components/export/project-export-dialog.svelte";
   import ProjectNotesKanbanView from "$lib/components/project/project-notes-kanban-view.svelte";
   import ProjectNotesListView from "$lib/components/project/project-notes-list-view.svelte";
   import ProjectViewSwitcher from "$lib/components/project/project-view-switcher.svelte";
@@ -73,6 +74,11 @@
     </div>
 
     <div class="flex flex-wrap items-center gap-2">
+      <ProjectExportDialog
+        projectId={data.project.id}
+        projectName={data.project.name}
+        orderedNoteIds={data.projectNotes.map((n) => n.id)}
+      />
       <button
         type="button"
         class="border-border bg-card text-foreground hover:bg-muted/60 inline-flex h-10 shrink-0 items-center rounded-lg border px-4 text-sm font-medium shadow-xs transition-colors disabled:opacity-50"

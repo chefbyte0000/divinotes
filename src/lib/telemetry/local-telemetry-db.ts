@@ -66,6 +66,27 @@ export async function listTelemetrySince(cutoffIso: string): Promise<TelemetryEv
 }
 
 /** Optional: read recent rows for debugging / future exporter UI */
+/** Full table scan — used for optional device-local export bundles (never synced). */
+export async function readAllTelemetryEvents(): Promise<TelemetryEventRow[]> {
+	const db = await openDb();
+	return new Promise((resolve, reject) => {
+		const tx = db.transaction(STORE, "readonly");
+		const req = tx.objectStore(STORE).openCursor();
+		const out: TelemetryEventRow[] = [];
+		req.onerror = () => reject(req.error ?? new Error("telemetry full read failed"));
+		req.onsuccess = () => {
+			const cur = req.result;
+			if (!cur) {
+				out.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+				resolve(out);
+				return;
+			}
+			out.push(cur.value as TelemetryEventRow);
+			cur.continue();
+		};
+	});
+}
+
 export async function readTelemetryEventsRecent(limit: number): Promise<TelemetryEventRow[]> {
 	const db = await openDb();
 	return new Promise((resolve, reject) => {

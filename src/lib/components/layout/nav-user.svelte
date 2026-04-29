@@ -2,7 +2,9 @@
   import * as Avatar from "$lib/components/ui/avatar/index.js";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import * as Sidebar from "$lib/components/ui/sidebar/index.js";
+  import AccountDataDialog from "$lib/components/export/account-data-dialog.svelte";
   import {
+    Archive,
     ChevronsUpDown,
     LogOut,
     BadgeCheck,
@@ -15,7 +17,11 @@
   }: {
     user: { name: string; email: string; avatar: string };
   } = $props();
+
+  let accountDataOpen = $state(false);
 </script>
+
+<AccountDataDialog bind:open={accountDataOpen} hideTrigger />
 
 <Sidebar.MenuItem>
   <DropdownMenu.Root>
@@ -106,6 +112,10 @@
       <DropdownMenu.Separator />
 
       <DropdownMenu.Group>
+        <DropdownMenu.Item class="gap-2 rounded-md" onclick={() => (accountDataOpen = true)}>
+          <Archive class="h-4 w-4 text-muted-foreground" />
+          Data & privacy
+        </DropdownMenu.Item>
         <DropdownMenu.Item class="gap-2 rounded-md">
           <BadgeCheck class="h-4 w-4 text-muted-foreground" />
           Account Settings
