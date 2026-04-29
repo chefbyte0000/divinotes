@@ -45,6 +45,16 @@ export async function getAiPersonaBySlug(slug: string): Promise<AiPersona | unde
 	return row;
 }
 
+export async function getActiveAiPersonaBySlug(slug: string): Promise<AiPersona | undefined> {
+	const s = normalizeSlug(slug);
+	const [row] = await db
+		.select()
+		.from(aiPersonas)
+		.where(and(eq(aiPersonas.slug, s), eq(aiPersonas.isActive, true)))
+		.limit(1);
+	return row;
+}
+
 /** For feature modules (summarization, recipes, …): active personas tagged with `tag`. */
 export async function listActiveAiPersonasByCapabilityTag(tag: string): Promise<AiPersona[]> {
 	const t = tag.toLowerCase();

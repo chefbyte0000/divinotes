@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Editor } from "@tiptap/core";
   import { Button } from "$lib/components/ui/button/index.js";
+  import NoteSummarizeTrigger from "$lib/components/editor/note-summarize-trigger.svelte";
   import {
     AlignCenter,
     AlignLeft,
@@ -26,8 +27,11 @@
 
   let {
     editor,
+    noteTitle = "",
   }: {
     editor: Editor;
+    /** Passed to local AI summarize for context */
+    noteTitle?: string;
   } = $props();
 
   /** Bump so `$derived` toolbar states refresh on transactions */
@@ -296,4 +300,8 @@
   >
     <LinkIcon class="size-4" />
   </Button>
+
+  <span class="bg-border mx-1 inline-block h-6 w-px shrink-0 opacity-80" aria-hidden="true"></span>
+
+  <NoteSummarizeTrigger {editor} {noteTitle} />
 </div>

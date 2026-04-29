@@ -4,7 +4,11 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { bootLocalInference, getInferenceClient } from "$lib/ai/inference-bootstrap";
+  import {
+    bootLocalInference,
+    getInferenceClient,
+    PREFERRED_WEBLLM_MODEL_STORAGE_KEY,
+  } from "$lib/ai/inference-bootstrap";
   import { DEFAULT_WEBLLM_MODEL_ID } from "$lib/ai/ai-protocol";
   import {
     CURATED_WEBLLM_MODELS,
@@ -19,8 +23,6 @@
   import LoaderCircle from "@lucide/svelte/icons/loader-circle";
   import Sparkles from "@lucide/svelte/icons/sparkles";
   import Cpu from "@lucide/svelte/icons/cpu";
-
-  const STORAGE_KEY = "divinotes-preferred-webllm-model";
 
   type GpuState =
     | { status: "idle" }
@@ -50,7 +52,7 @@
 
   onMount(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(PREFERRED_WEBLLM_MODEL_STORAGE_KEY);
       if (stored && stored.trim()) {
         selectedId = stored.trim();
         if (!CURATED_WEBLLM_MODELS.some((m) => m.id === selectedId)) {
@@ -70,7 +72,7 @@
 
   function persistSelection(id: string) {
     try {
-      localStorage.setItem(STORAGE_KEY, id);
+      localStorage.setItem(PREFERRED_WEBLLM_MODEL_STORAGE_KEY, id);
     } catch {
       /* ignore */
     }

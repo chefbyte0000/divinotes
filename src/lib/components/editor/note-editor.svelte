@@ -12,12 +12,15 @@
     noteId,
     projectId,
     initialDoc,
+    noteTitle = "",
     syncStatus,
     onSaveStatus,
   }: {
     noteId: string;
     projectId: string | null;
     initialDoc: JSONContent;
+    /** Shown title for local AI summarize context */
+    noteTitle?: string;
     syncStatus?: "idle" | "saving" | "saved" | "error";
     onSaveStatus?: (s: "idle" | "saving" | "saved" | "error") => void;
   } = $props();
@@ -131,7 +134,7 @@
   class="tiptap-editor-root border-border bg-card text-card-foreground shadow-xs flex flex-col overflow-hidden rounded-2xl border"
 >
   {#if editor}
-    <EditorToolbar {editor} />
+    <EditorToolbar {editor} {noteTitle} />
   {/if}
 
   <div class="relative min-h-0 flex-1">

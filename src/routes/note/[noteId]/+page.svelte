@@ -114,6 +114,7 @@
       noteId={data.note.id}
       projectId={data.note.projectId}
       initialDoc={initialDoc}
+      noteTitle={data.note.title ?? ""}
       syncStatus={saveStatus}
       onSaveStatus={(s) => {
         saveStatus = s;
