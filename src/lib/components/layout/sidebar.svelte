@@ -22,6 +22,7 @@
     Plus,
     Users,
     FileText,
+    Sparkles,
   } from "@lucide/svelte";
 
   let sessionUser = $derived(page.data.session?.user);
@@ -321,7 +322,18 @@
         </Sidebar.GroupLabel>
         <Sidebar.GroupContent>
           <Sidebar.Menu class="space-y-1">
-            <NavItem icon={Users} title="Users" url="/admin/users" isActive={pathname.startsWith("/admin/users")} />
+            <NavItem
+              icon={Users}
+              title="Users"
+              url="/admin/users"
+              isActive={pathname.startsWith("/admin/users")}
+            />
+            <NavItem
+              icon={Sparkles}
+              title="AI personas"
+              url="/admin/ai-personas"
+              isActive={pathname.startsWith("/admin/ai-personas")}
+            />
           </Sidebar.Menu>
         </Sidebar.GroupContent>
       </Sidebar.Group>

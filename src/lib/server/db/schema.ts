@@ -4,6 +4,7 @@ import {
 	timestamp,
 	primaryKey,
 	integer,
+	boolean,
 	pgEnum,
 	jsonb,
 	uniqueIndex,
@@ -11,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import type { SmartListItemRow, SmartListMetadata } from "$lib/types/smart-list";
+import type { AiPersonaConfig } from "$lib/types/ai-persona";
 import type { AdapterAccount } from "@auth/core/adapters";
 
 export const roleEnum = pgEnum("role", ["admin", "premium", "standard"]);
@@ -155,3 +157,32 @@ export const smartLists = pgTable(
 
 export type SmartList = InferSelectModel<typeof smartLists>;
 export type NewSmartList = InferInsertModel<typeof smartLists>;
+
+/**
+ * Admin-managed system prompts and metadata for on-device / local AI features.
+ * `slug` is the stable integration key (summarization, recipe flows, etc.).
+ */
+export const aiPersonas = pgTable(
+	"ai_personas",
+	{
+		id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+		/** URL-safe unique key, e.g. `note-summarizer` */
+		slug: text("slug").notNull().unique(),
+		name: text("name").notNull(),
+		description: text("description"),
+		systemPrompt: text("system_prompt").notNull(),
+		capabilityTags: jsonb("capability_tags").$type<string[]>().notNull().default([]),
+		config: jsonb("config").$type<AiPersonaConfig>().notNull().default({}),
+		sortOrder: integer("sort_order").notNull().default(0),
+		isActive: boolean("is_active").notNull().default(true),
+		createdAt: timestamp("created_at", { mode: "date" }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { mode: "date" }).notNull().defaultNow(),
+	},
+	(t) => [
+		index("ai_personas_sort_order_idx").on(t.sortOrder),
+		index("ai_personas_is_active_idx").on(t.isActive),
+	],
+);
+
+export type AiPersona = InferSelectModel<typeof aiPersonas>;
+export type NewAiPersona = InferInsertModel<typeof aiPersonas>;
