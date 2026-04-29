@@ -65,6 +65,8 @@ export interface NoteMetadata {
 	status?: string;
 	tags?: string[];
 	priority?: number;
+	/** Optional narrative order within a project (lower = earlier). Set by AI organize / user tooling. */
+	sortRank?: number;
 }
 
 export const projects = pgTable(

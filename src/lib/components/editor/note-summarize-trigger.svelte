@@ -17,12 +17,20 @@
   let {
     editor,
     noteTitle = "",
+    /** When true, no sparkles button — parent launches via `launchToken` increments (e.g. ⋯ menu). */
+    hideTrigger = false,
+    /** Increment to start summarization when `hideTrigger` is true. */
+    launchToken = 0,
+    open = $bindable(false),
   }: {
     editor: Editor;
     noteTitle?: string;
+    hideTrigger?: boolean;
+    launchToken?: number;
+    open?: boolean;
   } = $props();
 
-  let open = $state(false);
+  let lastLaunchToken = $state(0);
   let phase = $state<
     "idle" | "gpu" | "persona" | "model" | "stream" | "done" | "error"
   >("idle");
@@ -45,6 +53,13 @@
       abort?.abort();
       reset();
     }
+  });
+
+  $effect(() => {
+    if (!hideTrigger) return;
+    if (launchToken <= lastLaunchToken) return;
+    lastLaunchToken = launchToken;
+    void run();
   });
 
   function summaryToEditorHtml(text: string): string {
@@ -144,17 +159,19 @@
 </script>
 
 <span class="contents inline-flex">
-  <Button
-    type="button"
-    variant="ghost"
-    size="icon-sm"
-    class="size-8 shrink-0"
-    title="Summarize note (local AI)"
-    disabled={open}
-    onclick={() => void run()}
-  >
-    <Sparkles class="size-4" />
-  </Button>
+  {#if !hideTrigger}
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon-sm"
+      class="size-8 shrink-0"
+      title="Summarize note (local AI)"
+      disabled={open}
+      onclick={() => void run()}
+    >
+      <Sparkles class="size-4" />
+    </Button>
+  {/if}
 
   <Dialog.Root bind:open>
     <Dialog.Content class="max-h-[min(90vh,640px)] max-w-lg gap-0 overflow-hidden p-0 sm:max-w-lg">

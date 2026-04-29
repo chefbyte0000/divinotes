@@ -4,7 +4,6 @@
   import { TextSelection } from "@tiptap/pm/state";
 
   import EditorToolbar from "$lib/components/editor/editor-toolbar.svelte";
-  import NoteSummarizeTrigger from "$lib/components/editor/note-summarize-trigger.svelte";
   import NoteEditorMoreMenu from "$lib/components/editor/note-editor-more-menu.svelte";
   import { queueNoteEmbeddingSync } from "$lib/ai/note-embedding-sync";
   import { createNoteExtensions } from "$lib/tiptap/note-extensions";
@@ -14,6 +13,7 @@
     transformPastedHtmlSanitize,
   } from "$lib/tiptap/clipboard-smart-paste";
   import { registerNotePlainTextGetter } from "$lib/editor/note-plaintext-bus";
+  import type { ProjectNoteRow } from "$lib/types/project-notes";
 
   let {
     noteId,
@@ -23,6 +23,7 @@
     redirectHref,
     syncStatus,
     onSaveStatus,
+    projectOrganize = null,
   }: {
     noteId: string;
     projectId: string | null;
@@ -33,6 +34,12 @@
     redirectHref?: string;
     syncStatus?: "idle" | "saving" | "saved" | "error";
     onSaveStatus?: (s: "idle" | "saving" | "saved" | "error") => void;
+    /** When set, ⋯ menu can run “Organize project” for this project’s notes. */
+    projectOrganize?: {
+      projectId: string;
+      projectName: string;
+      notes: ProjectNoteRow[];
+    } | null;
   } = $props();
 
   let host = $state<HTMLDivElement | null>(null);
@@ -164,10 +171,7 @@
         <EditorToolbar {editor} />
       </div>
       <div class="border-border/60 flex shrink-0 items-start gap-0 border-l pt-1 pr-1 md:pr-1.5">
-        <div class="flex shrink-0 items-start pt-0.5">
-          <NoteSummarizeTrigger {editor} {noteTitle} />
-        </div>
-        <NoteEditorMoreMenu {noteId} {noteTitle} {redirectHref} />
+        <NoteEditorMoreMenu {editor} {noteId} {noteTitle} {redirectHref} {projectOrganize} />
       </div>
     </div>
   {/if}

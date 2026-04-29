@@ -3,6 +3,7 @@ export type ProjectNoteMetadata = {
 	status?: string;
 	tags?: string[];
 	priority?: number;
+	sortRank?: number;
 };
 
 /** Note row for project list / kanban views (serialized from `+page.server`). */

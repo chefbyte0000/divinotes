@@ -4,7 +4,7 @@ import {
 	projects as projectsTable,
 	smartLists as smartListsTable,
 } from "$lib/server/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { error, redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from "./$types";
 
@@ -20,6 +20,14 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	if (!project) error(404, "Project not found");
 
+	const sortRankKey = sql<number>`
+		CASE
+			WHEN ${notesTable.metadata}->>'sortRank' ~ '^[0-9]+$'
+			THEN (${notesTable.metadata}->>'sortRank')::int
+			ELSE 1000000000
+		END
+	`;
+
 	const projectNotes = await db
 		.select({
 			id: notesTable.id,
@@ -30,7 +38,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		})
 		.from(notesTable)
 		.where(and(eq(notesTable.ownerId, session.user.id), eq(notesTable.projectId, params.projectId)))
-		.orderBy(desc(notesTable.updatedAt));
+		.orderBy(asc(sortRankKey), desc(notesTable.updatedAt));
 
 	const projectSmartLists = await db
 		.select({

@@ -20,6 +20,7 @@ export const AI_PERSONA_CAPABILITY_SUGGESTIONS = [
 	"writing",
 	"code",
 	"analysis",
+	"organization",
 ] as const;
 
 export type AiPersonaCapabilitySuggestion = (typeof AI_PERSONA_CAPABILITY_SUGGESTIONS)[number];

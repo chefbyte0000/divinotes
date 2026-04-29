@@ -2,6 +2,7 @@
   import { goto, invalidateAll } from "$app/navigation";
   import DeleteNoteDialog from "$lib/components/editor/delete-note-dialog.svelte";
   import ProjectExportDialog from "$lib/components/export/project-export-dialog.svelte";
+  import ProjectAiOrganizeDialog from "$lib/components/project/project-ai-organize-dialog.svelte";
   import ProjectNotesKanbanView from "$lib/components/project/project-notes-kanban-view.svelte";
   import ProjectNotesListView from "$lib/components/project/project-notes-list-view.svelte";
   import ProjectViewSwitcher from "$lib/components/project/project-view-switcher.svelte";
@@ -148,7 +149,14 @@
         </span>
       </div>
       {#if data.projectNotes.length > 0}
-        <ProjectViewSwitcher bind:view projectId={data.project.id} />
+        <div class="flex flex-wrap items-center gap-2">
+          <ProjectAiOrganizeDialog
+            projectId={data.project.id}
+            projectName={data.project.name}
+            notes={data.projectNotes}
+          />
+          <ProjectViewSwitcher bind:view projectId={data.project.id} />
+        </div>
       {/if}
     </div>
 
