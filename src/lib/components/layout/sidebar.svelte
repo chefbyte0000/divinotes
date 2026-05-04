@@ -21,7 +21,7 @@
     Home,
     LayoutGrid,
     ListTodo,
-    Megaphone,
+    Bell,
     Orbit,
     Plus,
     MoreHorizontal,
@@ -268,6 +268,15 @@
     deleteOpen = true;
   }
 
+  async function duplicateNote(noteId: string) {
+    await runSidebarMutation(`duplicate-note-${noteId}`, async () => {
+      const response = await fetch(`/api/notes/${noteId}/duplicate`, { method: "POST" });
+      if (!response.ok) throw new Error("Could not duplicate note");
+      const data = (await response.json()) as { id: string };
+      await goto(`/note/${data.id}`);
+    });
+  }
+
   async function confirmRenameProject() {
     if (!renameProjectId) return;
     const next = renameProjectValue.trim();
@@ -458,6 +467,7 @@
                   onCommit={() => void commitInlineNoteEdit()}
                   onCancelEdit={cancelInlineNoteEdit}
                   onDelete={() => deleteNote(n.id, n.title)}
+                  onDuplicate={() => void duplicateNote(n.id)}
                   onRenameRequest={() => startInlineNoteEdit(n.id, n.title)}
                 />
               {/each}
@@ -665,6 +675,7 @@
                         onCommit={() => void commitInlineNoteEdit()}
                         onCancelEdit={cancelInlineNoteEdit}
                         onDelete={() => deleteNote(n.id, n.title)}
+                        onDuplicate={() => void duplicateNote(n.id)}
                         onRenameRequest={() => startInlineNoteEdit(n.id, n.title)}
                       />
                     {/each}
@@ -701,8 +712,8 @@
               isActive={pathname.startsWith("/admin/ai-personas")}
             />
             <NavItem
-              icon={Megaphone}
-              title="Broadcasts"
+              icon={Bell}
+              title="Notifications"
               url="/admin/notifications"
               isActive={pathname.startsWith("/admin/notifications")}
             />

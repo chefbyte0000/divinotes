@@ -3,7 +3,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
-  import { FileText, MoreHorizontal, Pencil, Trash2 } from "@lucide/svelte";
+  import { CopyPlus, FileText, MoreHorizontal, Pencil, Trash2 } from "@lucide/svelte";
   import type { WorkspaceNoteSummary } from "$lib/types/workspace-notes";
   import { cn } from "$lib/utils.js";
 
@@ -23,6 +23,7 @@
     onCommit,
     onCancelEdit,
     onDelete,
+    onDuplicate,
     onRenameRequest,
   }: {
     note: WorkspaceNoteSummary;
@@ -37,6 +38,7 @@
     onCommit: () => void | Promise<void>;
     onCancelEdit: () => void;
     onDelete: () => void;
+    onDuplicate: () => void;
     onRenameRequest: () => void;
   } = $props();
 
@@ -135,6 +137,10 @@
         <DropdownMenu.Item class="gap-2" onclick={() => onRenameRequest()}>
           <Pencil class="size-4" />
           Rename
+        </DropdownMenu.Item>
+        <DropdownMenu.Item class="gap-2" onclick={() => onDuplicate()}>
+          <CopyPlus class="size-4" />
+          Duplicate
         </DropdownMenu.Item>
         <DropdownMenu.Item variant="destructive" class="gap-2" onclick={() => onDelete()}>
           <Trash2 class="size-4" />
