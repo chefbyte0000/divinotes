@@ -5,6 +5,8 @@
 
   import EditorToolbar from "$lib/components/editor/editor-toolbar.svelte";
   import NoteEditorMoreMenu from "$lib/components/editor/note-editor-more-menu.svelte";
+  import NoteSummarizeTrigger from "$lib/components/editor/note-summarize-trigger.svelte";
+  import NoteOrganizeTrigger from "$lib/components/editor/note-organize-trigger.svelte";
   import { queueNoteEmbeddingSync } from "$lib/ai/note-embedding-sync";
   import { createNoteExtensions } from "$lib/tiptap/note-extensions";
   import { jsonContentToPlainText } from "$lib/tiptap/json-content-to-plain-text";
@@ -13,7 +15,6 @@
     transformPastedHtmlSanitize,
   } from "$lib/tiptap/clipboard-smart-paste";
   import { registerNotePlainTextGetter } from "$lib/editor/note-plaintext-bus";
-  import type { ProjectNoteRow } from "$lib/types/project-notes";
 
   let {
     noteId,
@@ -23,7 +24,6 @@
     redirectHref,
     syncStatus,
     onSaveStatus,
-    projectOrganize = null,
   }: {
     noteId: string;
     projectId: string | null;
@@ -34,12 +34,6 @@
     redirectHref?: string;
     syncStatus?: "idle" | "saving" | "saved" | "error";
     onSaveStatus?: (s: "idle" | "saving" | "saved" | "error") => void;
-    /** When set, ⋯ menu can run “Organize project” for this project’s notes. */
-    projectOrganize?: {
-      projectId: string;
-      projectName: string;
-      notes: ProjectNoteRow[];
-    } | null;
   } = $props();
 
   let host = $state<HTMLDivElement | null>(null);
@@ -50,6 +44,9 @@
 
   /** Toolbar / stats react to edits */
   let docTick = $state(0);
+  let summarizeOpen = $state(false);
+  let summarizeLaunch = $state(0);
+  let organizeOpen = $state(false);
 
   async function persist(doc: JSONContent) {
     onSaveStatus?.("saving");
@@ -82,6 +79,14 @@
       extensions: createNoteExtensions({
         projectId,
         excludeNoteId: noteId,
+        aiActions: {
+          summarize: () => {
+            summarizeLaunch += 1;
+          },
+          organizeNote: () => {
+            organizeOpen = true;
+          },
+        },
       }),
       content: initialDoc,
       editorProps: {
@@ -163,6 +168,23 @@
   class="tiptap-editor-root border-border bg-card text-card-foreground shadow-xs flex flex-col overflow-hidden rounded-2xl border"
 >
   {#if editor}
+    <NoteSummarizeTrigger
+      bind:open={summarizeOpen}
+      {editor}
+      hideTrigger
+      launchToken={summarizeLaunch}
+      {noteTitle}
+    />
+  {/if}
+  {#if editor}
+    <NoteOrganizeTrigger
+      bind:open={organizeOpen}
+      hideTrigger
+      {editor}
+      {noteTitle}
+    />
+  {/if}
+  {#if editor}
     <div
       class="border-border bg-muted/30 flex min-w-0 items-stretch gap-0 border-b"
       role="presentation"
@@ -171,7 +193,20 @@
         <EditorToolbar {editor} />
       </div>
       <div class="border-border/60 flex shrink-0 items-start gap-0 border-l pt-1 pr-1 md:pr-1.5">
-        <NoteEditorMoreMenu {editor} {noteId} {noteTitle} {redirectHref} {projectOrganize} />
+        <NoteEditorMoreMenu
+          {editor}
+          {noteId}
+          {noteTitle}
+          {redirectHref}
+          {summarizeOpen}
+          {organizeOpen}
+          onSummarize={() => {
+            summarizeLaunch += 1;
+          }}
+          handleOrganizeNote={() => {
+            organizeOpen = true;
+          }}
+        />
       </div>
     </div>
   {/if}

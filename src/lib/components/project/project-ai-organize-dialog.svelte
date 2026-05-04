@@ -8,7 +8,10 @@
   import {
     applyOrganizePatches,
     buildOrganizePatches,
+    generateWorkspaceOrganizeClarificationQuestions,
     generateWorkspaceOrganizePlan,
+    type OrganizeClarificationAnswer,
+    type OrganizeClarificationQuestion,
     type OrganizePlan,
     type OrganizeNotePatch,
   } from "$lib/ai/workspace-organize-ai";
@@ -31,13 +34,17 @@
     hideTrigger?: boolean;
     open?: boolean;
   } = $props();
-  let phase = $state<"idle" | "running" | "preview" | "apply" | "error">("idle");
+  let phase = $state<"idle" | "questioning" | "questions" | "running" | "preview" | "apply" | "error">("idle");
   let errorMessage = $state<string | null>(null);
   let modelHint = $state("");
   let plan = $state<OrganizePlan | null>(null);
   let patches = $state<OrganizeNotePatch[]>([]);
   let truncatedHint = $state(false);
   let abort: AbortController | null = null;
+  let questions = $state<OrganizeClarificationQuestion[]>([]);
+  let selectedOptionByQuestion = $state<Record<string, string>>({});
+  let customEnabledByQuestion = $state<Record<string, boolean>>({});
+  let customTextByQuestion = $state<Record<string, string>>({});
 
   function titleOf(row: ProjectNoteRow) {
     return row.title?.trim() ? row.title : "Untitled note";
@@ -50,6 +57,10 @@
     plan = null;
     patches = [];
     truncatedHint = false;
+    questions = [];
+    selectedOptionByQuestion = {};
+    customEnabledByQuestion = {};
+    customTextByQuestion = {};
     abort?.abort();
     abort = null;
   }
@@ -63,7 +74,104 @@
 
   const changeCount = $derived(patches.filter((p) => p.hasChanges).length);
 
-  async function analyze() {
+  function applySuggestedDefaults(nextQuestions: OrganizeClarificationQuestion[]) {
+    const selected: Record<string, string> = {};
+    const customFlags: Record<string, boolean> = {};
+    const customText: Record<string, string> = {};
+    for (const q of nextQuestions) {
+      const suggested = q.options.find((o) => o.suggested) ?? q.options[0];
+      selected[q.id] = suggested?.id ?? "";
+      customFlags[q.id] = false;
+      customText[q.id] = "";
+    }
+    selectedOptionByQuestion = selected;
+    customEnabledByQuestion = customFlags;
+    customTextByQuestion = customText;
+  }
+
+  function collectClarificationAnswers(): OrganizeClarificationAnswer[] {
+    const out: OrganizeClarificationAnswer[] = [];
+    for (const q of questions) {
+      if (customEnabledByQuestion[q.id]) {
+        const custom = (customTextByQuestion[q.id] ?? "").trim();
+        if (custom) out.push({ questionId: q.id, answer: custom });
+        continue;
+      }
+      const optionId = selectedOptionByQuestion[q.id];
+      const option = q.options.find((o) => o.id === optionId) ?? q.options.find((o) => o.suggested) ?? q.options[0];
+      if (option) out.push({ questionId: q.id, answer: option.label });
+    }
+    return out;
+  }
+
+  async function analyzeContext() {
+    abort?.abort();
+    abort = new AbortController();
+    const signal = abort.signal;
+    errorMessage = null;
+    plan = null;
+    patches = [];
+    phase = "questioning";
+    modelHint = "";
+
+    const gpu = await detectWebGpu();
+    if (!gpu.ok) {
+      phase = "error";
+      errorMessage = `${gpu.title}: ${gpu.description}`;
+      return;
+    }
+
+    const onModelProgress = (r: InitProgressReport) => {
+      const t = typeof (r as { text?: unknown }).text === "string" ? (r as { text: string }).text : "";
+      if (t) modelHint = t;
+    };
+
+    try {
+      const { questions: nextQuestions, ctx } = await generateWorkspaceOrganizeClarificationQuestions({
+        projectId,
+        signal,
+        onModelProgress,
+      });
+      if (signal.aborted) return;
+      truncatedHint = ctx.truncated;
+      questions = nextQuestions;
+      applySuggestedDefaults(nextQuestions);
+      phase = "questions";
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        phase = "idle";
+        return;
+      }
+      phase = "error";
+      errorMessage = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function applyChanges() {
+    if (!plan || patches.length === 0) return;
+    abort?.abort();
+    abort = new AbortController();
+    const signal = abort.signal;
+    phase = "apply";
+    errorMessage = null;
+
+    try {
+      await applyOrganizePatches(patches, signal);
+      if (signal.aborted) return;
+      await invalidateAll();
+      toast("Notes updated from the AI organization plan.", { variant: "success" });
+      open = false;
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") {
+        phase = "preview";
+        return;
+      }
+      phase = "error";
+      errorMessage = e instanceof Error ? e.message : String(e);
+    }
+  }
+
+  async function analyzeWithAnswers() {
     abort?.abort();
     abort = new AbortController();
     const signal = abort.signal;
@@ -88,6 +196,7 @@
     try {
       const { plan: nextPlan, ctx } = await generateWorkspaceOrganizePlan({
         projectId,
+        clarifications: collectClarificationAnswers(),
         signal,
         onModelProgress,
       });
@@ -98,31 +207,7 @@
       phase = "preview";
     } catch (e) {
       if (e instanceof DOMException && e.name === "AbortError") {
-        phase = "idle";
-        return;
-      }
-      phase = "error";
-      errorMessage = e instanceof Error ? e.message : String(e);
-    }
-  }
-
-  async function applyChanges() {
-    if (!plan || patches.length === 0) return;
-    abort?.abort();
-    abort = new AbortController();
-    const signal = abort.signal;
-    phase = "apply";
-    errorMessage = null;
-
-    try {
-      await applyOrganizePatches(patches, signal);
-      if (signal.aborted) return;
-      await invalidateAll();
-      toast("Project notes updated from the AI plan.", { variant: "success" });
-      open = false;
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") {
-        phase = "preview";
+        phase = "questions";
         return;
       }
       phase = "error";
@@ -152,7 +237,7 @@
     <Dialog.Header class="border-border shrink-0 space-y-1 border-b px-6 py-4">
       <Dialog.Title class="flex items-center gap-2 text-base">
         <Layers class="text-primary size-4" />
-        Organize project notes
+        Organize notes
       </Dialog.Title>
       <Dialog.Description class="text-xs leading-relaxed">
         Uses the <span class="font-mono text-[11px]">workspace-note-organizer</span> persona and your
@@ -171,6 +256,69 @@
       {/if}
 
       {#if phase === "idle" || phase === "error"}
+        <div class="space-y-2">
+          <h3 class="text-sm font-medium">Smart pre-analysis</h3>
+          <p class="text-muted-foreground text-sm leading-relaxed">
+            First, AI analyzes your project context and generates clarifying questions with suggested
+            options. Then your answers guide a better organization plan.
+          </p>
+        </div>
+      {/if}
+
+      {#if phase === "questions"}
+        <div class="space-y-3">
+          <h3 class="text-sm font-medium">Clarifying questions</h3>
+          <p class="text-muted-foreground text-sm leading-relaxed">
+            Review AI-generated questions. Choose an option or switch to a custom answer for each one.
+          </p>
+          {#each questions as q (q.id)}
+            <div class="border-border bg-muted/20 space-y-2 rounded-lg border p-3">
+              <p class="text-sm font-medium">{q.prompt}</p>
+              <div class="flex flex-wrap gap-2">
+                {#each q.options as opt (opt.id)}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!customEnabledByQuestion[q.id] && selectedOptionByQuestion[q.id] === opt.id ? "default" : "outline"}
+                    onclick={() => {
+                      selectedOptionByQuestion = { ...selectedOptionByQuestion, [q.id]: opt.id };
+                      customEnabledByQuestion = { ...customEnabledByQuestion, [q.id]: false };
+                    }}
+                  >
+                    {opt.label}
+                    {#if opt.suggested}
+                      <span class="ml-1 opacity-80">(Suggested)</span>
+                    {/if}
+                  </Button>
+                {/each}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={customEnabledByQuestion[q.id] ? "default" : "outline"}
+                  onclick={() => {
+                    customEnabledByQuestion = { ...customEnabledByQuestion, [q.id]: true };
+                  }}
+                >
+                  Custom answer
+                </Button>
+              </div>
+              {#if customEnabledByQuestion[q.id]}
+                <textarea
+                  class="border-border bg-background text-foreground placeholder:text-muted-foreground min-h-20 w-full rounded-md border px-3 py-2 text-sm focus:outline-none"
+                  placeholder="Write a custom answer..."
+                  value={customTextByQuestion[q.id] ?? ""}
+                  oninput={(e) => {
+                    const value = (e.currentTarget as HTMLTextAreaElement).value;
+                    customTextByQuestion = { ...customTextByQuestion, [q.id]: value };
+                  }}
+                ></textarea>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if phase === "idle" || phase === "error" || phase === "questions"}
         <p class="text-muted-foreground text-sm leading-relaxed">
           The organizer reads titles, descriptions, tags, and short body excerpts, then proposes kanban
           columns, priorities, tags, and a reading order (
@@ -178,7 +326,12 @@
         </p>
       {/if}
 
-      {#if phase === "running"}
+      {#if phase === "questioning"}
+        <p class="text-muted-foreground flex items-center gap-2 text-sm">
+          <LoaderCircle class="size-4 shrink-0 animate-spin" />
+          {modelHint || "Analyzing context and generating questions…"}
+        </p>
+      {:else if phase === "running"}
         <p class="text-muted-foreground flex items-center gap-2 text-sm">
           <LoaderCircle class="size-4 shrink-0 animate-spin" />
           {modelHint || "Running local model…"}
@@ -281,11 +434,20 @@
     <Dialog.Footer class="border-border bg-muted/20 flex shrink-0 flex-wrap gap-2 border-t px-6 py-3">
       <Button type="button" variant="outline" onclick={() => (open = false)}>Close</Button>
       {#if phase === "idle" || phase === "error"}
-        <Button type="button" onclick={() => void analyze()} disabled={notes.length === 0}>
-          Analyze project
+        <Button type="button" onclick={() => void analyzeContext()} disabled={notes.length === 0}>
+          Analyze context
+        </Button>
+      {:else if phase === "questions"}
+        <Button type="button" variant="secondary" onclick={() => void analyzeContext()}>
+          Regenerate questions
+        </Button>
+        <Button type="button" onclick={() => void analyzeWithAnswers()}>
+          Organize with answers
         </Button>
       {:else if phase === "preview"}
-        <Button type="button" variant="secondary" onclick={() => void analyze()}>Regenerate</Button>
+        <Button type="button" variant="secondary" onclick={() => void analyzeContext()}>
+          Start over
+        </Button>
         <Button type="button" onclick={() => void applyChanges()} disabled={changeCount === 0}>
           Apply {changeCount} {changeCount === 1 ? "change" : "changes"}
         </Button>

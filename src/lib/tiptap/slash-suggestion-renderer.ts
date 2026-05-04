@@ -68,6 +68,12 @@ export function createSlashSuggestionRenderer() {
 			top.appendChild(lab);
 			top.appendChild(grp);
 			li.appendChild(top);
+			if (item.description) {
+				const desc = document.createElement("div");
+				desc.className = "text-muted-foreground line-clamp-2 text-xs";
+				desc.textContent = item.description;
+				li.appendChild(desc);
+			}
 			li.addEventListener("mousedown", (e) => {
 				e.preventDefault();
 				props.command(item);

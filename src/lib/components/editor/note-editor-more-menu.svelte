@@ -3,9 +3,6 @@
   import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import DeleteNoteDialog from "$lib/components/editor/delete-note-dialog.svelte";
-  import NoteSummarizeTrigger from "$lib/components/editor/note-summarize-trigger.svelte";
-  import ProjectAiOrganizeDialog from "$lib/components/project/project-ai-organize-dialog.svelte";
-  import type { ProjectNoteRow } from "$lib/types/project-notes";
   import { Layers, MoreHorizontal, Sparkles, Trash2 } from "@lucide/svelte";
 
   let {
@@ -13,49 +10,26 @@
     noteId,
     noteTitle = "",
     redirectHref,
-    projectOrganize = null,
+    onSummarize = () => {},
+    handleOrganizeNote = () => {},
+    summarizeOpen = false,
+    organizeOpen = false,
   }: {
     editor: Editor;
     noteId: string;
     noteTitle?: string;
     redirectHref?: string;
-    projectOrganize?: {
-      projectId: string;
-      projectName: string;
-      notes: ProjectNoteRow[];
-    } | null;
+    onSummarize?: () => void;
+    handleOrganizeNote?: () => void;
+    summarizeOpen?: boolean;
+    organizeOpen?: boolean;
   } = $props();
 
   let menuOpen = $state(false);
   let deleteOpen = $state(false);
-  let summarizeOpen = $state(false);
-  let summarizeLaunch = $state(0);
-  let organizeOpen = $state(false);
-
-  const canOrganizeProject = $derived(
-    projectOrganize != null && projectOrganize.notes.length > 0,
-  );
 </script>
 
 <div class="flex shrink-0 items-start pt-0.5">
-  <NoteSummarizeTrigger
-    bind:open={summarizeOpen}
-    {editor}
-    hideTrigger
-    launchToken={summarizeLaunch}
-    {noteTitle}
-  />
-
-  {#if projectOrganize}
-    <ProjectAiOrganizeDialog
-      bind:open={organizeOpen}
-      hideTrigger
-      projectId={projectOrganize.projectId}
-      projectName={projectOrganize.projectName}
-      notes={projectOrganize.notes}
-    />
-  {/if}
-
   <DropdownMenu.Root bind:open={menuOpen}>
     <DropdownMenu.Trigger>
       {#snippet child({ props })}
@@ -82,7 +56,7 @@
         disabled={summarizeOpen}
         onclick={() => {
           menuOpen = false;
-          summarizeLaunch += 1;
+          onSummarize();
         }}
       >
         <Sparkles class="size-4 shrink-0" />
@@ -90,20 +64,14 @@
       </DropdownMenu.Item>
       <DropdownMenu.Item
         class="gap-2"
-        disabled={!projectOrganize || !canOrganizeProject || organizeOpen}
-        title={projectOrganize == null ?
-          "Only available when this note belongs to a project"
-        : !canOrganizeProject ?
-          "Add at least one note to the project to run organize"
-        : undefined}
+        disabled={organizeOpen}
         onclick={() => {
-          if (!projectOrganize || !canOrganizeProject) return;
           menuOpen = false;
-          organizeOpen = true;
+          handleOrganizeNote();
         }}
       >
         <Layers class="size-4 shrink-0" />
-        Organize project…
+        Organize note…
       </DropdownMenu.Item>
 
       <DropdownMenu.Separator />

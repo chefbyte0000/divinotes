@@ -26,8 +26,8 @@
           : ''}"
       >
         <span
-          class="absolute inset-0 -z-10 rounded-lg bg-foreground/5 opacity-0 shadow-[0_4px_15px_rgba(0,0,0,0.08)] transition-all duration-300 ease-out group-hover:scale-105 group-hover:opacity-100 dark:shadow-[0_4px_15px_rgba(255,255,255,0.05)] {isActive
-            ? 'scale-100 opacity-100'
+          class="absolute inset-0 -z-10 rounded-lg bg-sidebar-accent/0 opacity-0 transition-colors duration-200 ease-out group-hover:bg-sidebar-accent/50 group-hover:opacity-100 {isActive
+            ? 'bg-sidebar-accent/80 opacity-100'
             : ''}"
         ></span>
 

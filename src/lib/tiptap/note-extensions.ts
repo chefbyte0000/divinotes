@@ -20,6 +20,10 @@ import { SlashCommands } from "./slash-command-extension";
 export function createNoteExtensions(opts: {
 	projectId: string | null;
 	excludeNoteId: string;
+	aiActions?: {
+		summarize?: () => void;
+		organizeNote?: () => void;
+	};
 }) {
 	return [
 		StarterKit.configure({
@@ -55,7 +59,7 @@ export function createNoteExtensions(opts: {
 					"bg-muted/80 border-border my-4 rounded-lg border p-3 font-mono text-[13px] leading-relaxed",
 			},
 		}),
-		SlashCommands,
+		SlashCommands.configure({ aiActions: opts.aiActions ?? {} }),
 		TextStyle,
 		TextAlign.configure({
 			types: ["heading", "paragraph"],

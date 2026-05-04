@@ -46,6 +46,27 @@ export type OrganizePlan = {
 	assignments: OrganizePlanAssignment[];
 };
 
+export type OrganizeClarificationQuestionOption = {
+	id: string;
+	label: string;
+	suggested?: boolean;
+};
+
+export type OrganizeClarificationQuestion = {
+	id: string;
+	prompt: string;
+	options: OrganizeClarificationQuestionOption[];
+};
+
+export type OrganizeClarificationAnswer = {
+	questionId: string;
+	answer: string;
+};
+
+type OrganizeClarificationQuestionEnvelope = {
+	questions: OrganizeClarificationQuestion[];
+};
+
 export type OrganizeNotePatch = {
 	noteId: string;
 	metadata: Partial<ProjectNoteMetadata>;
@@ -186,6 +207,60 @@ function parseOrganizePlanFromModelOutput(
 	return normalizeOrganizePlan(parsed, validIds, catalog);
 }
 
+function normalizeClarificationQuestions(data: unknown): OrganizeClarificationQuestion[] {
+	if (data === null || typeof data !== "object") return [];
+	const root = data as Partial<OrganizeClarificationQuestionEnvelope>;
+	if (!Array.isArray(root.questions)) return [];
+	const out: OrganizeClarificationQuestion[] = [];
+	const seenQuestionIds = new Set<string>();
+
+	for (const q of root.questions) {
+		if (q === null || typeof q !== "object") continue;
+		const qr = q as Record<string, unknown>;
+		const id = typeof qr.id === "string" ? qr.id.trim() : "";
+		const prompt = typeof qr.prompt === "string" ? qr.prompt.trim() : "";
+		if (!id || !prompt || seenQuestionIds.has(id)) continue;
+
+		const optsRaw = Array.isArray(qr.options) ? qr.options : [];
+		const options: OrganizeClarificationQuestionOption[] = [];
+		const seenOptionIds = new Set<string>();
+		for (const o of optsRaw) {
+			if (o === null || typeof o !== "object") continue;
+			const or = o as Record<string, unknown>;
+			const optionId = typeof or.id === "string" ? or.id.trim() : "";
+			const label = typeof or.label === "string" ? or.label.trim() : "";
+			if (!optionId || !label || seenOptionIds.has(optionId)) continue;
+			seenOptionIds.add(optionId);
+			options.push({
+				id: optionId,
+				label,
+				suggested: Boolean(or.suggested),
+			});
+		}
+		if (options.length < 2) continue;
+		if (!options.some((o) => o.suggested)) {
+			options[0] = { ...options[0], suggested: true };
+		}
+		seenQuestionIds.add(id);
+		out.push({ id, prompt, options: options.slice(0, 5) });
+		if (out.length >= 4) break;
+	}
+
+	return out;
+}
+
+function parseClarificationQuestionsFromModelOutput(raw: string): OrganizeClarificationQuestion[] {
+	const json = extractJsonObject(raw);
+	if (!json) return [];
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(json);
+	} catch {
+		return [];
+	}
+	return normalizeClarificationQuestions(parsed);
+}
+
 export async function fetchOrganizeNotesContext(projectId: string): Promise<OrganizeNotesContextResponse> {
 	const r = await fetch(`/api/projects/${encodeURIComponent(projectId)}/organize-notes-context`);
 	if (r.status === 404) throw new Error("Project not found.");
@@ -193,7 +268,10 @@ export async function fetchOrganizeNotesContext(projectId: string): Promise<Orga
 	return (await r.json()) as OrganizeNotesContextResponse;
 }
 
-function buildCatalogPrompt(ctx: OrganizeNotesContextResponse): string {
+function buildCatalogPrompt(
+	ctx: OrganizeNotesContextResponse,
+	clarifications?: OrganizeClarificationAnswer[],
+): string {
 	const lines: string[] = [
 		`Reorganize this project's notes for clearer structure, kanban flow, and discovery.`,
 		``,
@@ -208,6 +286,22 @@ function buildCatalogPrompt(ctx: OrganizeNotesContextResponse): string {
 			`Note: Only the ${ctx.maxNotes} most recently updated notes are included (this project has more).`,
 			``,
 		);
+	}
+
+	if (clarifications) {
+		const cleaned = clarifications
+			.map((a) => ({ questionId: a.questionId.trim(), answer: a.answer.trim() }))
+			.filter((a) => a.questionId && a.answer);
+		if (cleaned.length > 0) {
+			lines.push(`## User clarification answers for this run`);
+			for (const a of cleaned) {
+				lines.push(`- ${a.questionId}: ${a.answer}`);
+			}
+			lines.push(
+				`Adapt statuses, priorities, tags, and ordering to these preferences while keeping assignments realistic.`,
+			);
+			lines.push(``);
+		}
 	}
 
 	lines.push(`## Note catalog (use these exact noteId UUIDs only)`, ``);
@@ -241,11 +335,41 @@ function buildCatalogPrompt(ctx: OrganizeNotesContextResponse): string {
 	return lines.join("\n");
 }
 
+function buildClarificationQuestionPrompt(ctx: OrganizeNotesContextResponse): string {
+	const lines: string[] = [
+		`You are preparing a note-organization run for one project.`,
+		`Generate concise clarification questions that help personalize organization outcomes before planning.`,
+		``,
+		`Project: ${ctx.project.name.trim() || "(unnamed)"}`,
+		`Description: ${(ctx.project.description ?? "").trim() || "(none)"}`,
+		`Notes in context: ${ctx.notes.length}`,
+		``,
+		`Create 3-4 questions. Each question must include 3-4 options.`,
+		`Mark exactly one option as suggested (best default) using suggested=true.`,
+		`Options should be practical and mutually distinct.`,
+		``,
+		`Output strict JSON only in this shape:`,
+		`{`,
+		`  "questions": [`,
+		`    {`,
+		`      "id": "short-kebab-id",`,
+		`      "prompt": "Question text?",`,
+		`      "options": [`,
+		`        { "id": "opt-id", "label": "Option label", "suggested": true }`,
+		`      ]`,
+		`    }`,
+		`  ]`,
+		`}`,
+	];
+	return lines.join("\n");
+}
+
 /**
  * Loads project note excerpts, runs the workspace-note-organizer persona locally, and returns a validated plan.
  */
 export async function generateWorkspaceOrganizePlan(options: {
 	projectId: string;
+	clarifications?: OrganizeClarificationAnswer[];
 	signal?: AbortSignal;
 	onModelProgress?: (report: InitProgressReport) => void;
 }): Promise<{ ctx: OrganizeNotesContextResponse; plan: OrganizePlan; rawModelText: string }> {
@@ -267,7 +391,7 @@ export async function generateWorkspaceOrganizePlan(options: {
 	}
 
 	const validIds = new Set(ctx.notes.map((n) => n.id));
-	const userContent = buildCatalogPrompt(ctx);
+	const userContent = buildCatalogPrompt(ctx, options.clarifications);
 	const systemContent = buildEffectiveSystemPrompt(persona.systemPrompt, persona.config);
 
 	await ensureInferenceModelLoaded({ onProgress: options.onModelProgress });
@@ -306,6 +430,76 @@ export async function generateWorkspaceOrganizePlan(options: {
 	}
 
 	return { ctx, plan, rawModelText: out.trim() };
+}
+
+export async function generateWorkspaceOrganizeClarificationQuestions(options: {
+	projectId: string;
+	signal?: AbortSignal;
+	onModelProgress?: (report: InitProgressReport) => void;
+}): Promise<{ ctx: OrganizeNotesContextResponse; questions: OrganizeClarificationQuestion[] }> {
+	const ctx = await fetchOrganizeNotesContext(options.projectId);
+	if (ctx.notes.length === 0) {
+		throw new Error("This project has no notes to organize yet.");
+	}
+
+	let persona: FetchedPersona | null = null;
+	try {
+		persona = await fetchActivePersonaBySlug(WORKSPACE_NOTE_ORGANIZER_SLUG);
+	} catch {
+		throw new Error("Could not load the workspace organizer persona.");
+	}
+	if (!persona) {
+		throw new Error(
+			"The workspace-note-organizer persona is missing. Ask an admin to install starter personas under Admin → AI personas.",
+		);
+	}
+
+	await ensureInferenceModelLoaded({ onProgress: options.onModelProgress });
+	const client = getInferenceClient();
+	if (!client) throw new Error("Local AI is unavailable.");
+
+	const cfg = persona.config ?? {};
+	const systemContent = buildEffectiveSystemPrompt(persona.systemPrompt, persona.config);
+	const userContent = buildClarificationQuestionPrompt(ctx);
+	const maxTokens =
+		typeof cfg.suggestedMaxTokens === "number" ? Math.min(cfg.suggestedMaxTokens, 2400) : 900;
+	const temperature =
+		typeof cfg.suggestedTemperature === "number" ? Math.max(0.1, cfg.suggestedTemperature) : 0.28;
+
+	let out = "";
+	for await (const chunk of client.generateCompletion({
+		mode: "chat",
+		messages: [
+			{ role: "system", content: systemContent },
+			{ role: "user", content: userContent },
+		],
+		stream: true,
+		temperature,
+		max_tokens: maxTokens,
+	})) {
+		if (options.signal?.aborted) {
+			client.interrupt();
+			throw new DOMException("Aborted", "AbortError");
+		}
+		out += chunk;
+	}
+
+	let questions = parseClarificationQuestionsFromModelOutput(out);
+	if (questions.length === 0) {
+		questions = [
+			{
+				id: "main-goal",
+				prompt: "What should this organization optimize first?",
+				options: [
+					{ id: "execute", label: "Faster execution and next actions", suggested: true },
+					{ id: "cleanup", label: "Metadata consistency and cleanup" },
+					{ id: "ship", label: "Shipping milestones and delivery" },
+				],
+			},
+		];
+	}
+
+	return { ctx, questions };
 }
 
 function tagsEqual(a: string[] | undefined, b: string[]): boolean {

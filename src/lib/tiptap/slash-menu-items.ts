@@ -3,10 +3,16 @@ import type { Editor, Range } from "@tiptap/core";
 export type SlashMenuItem = {
 	id: string;
 	label: string;
+	description?: string;
 	keywords: string[];
 	/** Pick icon hint for renderer (optional) */
-	group: "text" | "structure" | "list" | "insert" | "code";
+	group: "text" | "structure" | "list" | "insert" | "code" | "ai";
 	run: (editor: Editor, range: Range) => void;
+};
+
+export type SlashAIActions = {
+	summarize?: () => void;
+	organizeNote?: () => void;
 };
 
 function delRangeThen(editor: Editor, range: Range, fn: () => void): void {
@@ -14,7 +20,7 @@ function delRangeThen(editor: Editor, range: Range, fn: () => void): void {
 	fn();
 }
 
-export function buildSlashMenuItems(editor: Editor): SlashMenuItem[] {
+export function buildSlashMenuItems(editor: Editor, aiActions?: SlashAIActions): SlashMenuItem[] {
 	const items: SlashMenuItem[] = [
 		{
 			id: "h1",
@@ -181,6 +187,34 @@ export function buildSlashMenuItems(editor: Editor): SlashMenuItem[] {
 			group: "code",
 			run: (ed, range) =>
 				delRangeThen(ed, range, () => ed.chain().focus().toggleCodeBlock({ language: L.language }).run()),
+		});
+	}
+
+	if (aiActions?.summarize) {
+		items.unshift({
+			id: "ai-summarize",
+			label: "Summarize",
+			description: "Generate a local AI summary of this note",
+			keywords: ["ai", "summary", "recap", "tldr"],
+			group: "ai",
+			run: (ed, range) =>
+				delRangeThen(ed, range, () => {
+					aiActions.summarize?.();
+				}),
+		});
+	}
+
+	if (aiActions?.organizeNote) {
+		items.unshift({
+			id: "ai-organize-note",
+			label: "Organize note",
+			description: "Restructure this note with intent-aware local AI",
+			keywords: ["ai", "organize", "restructure", "clarify", "rewrite"],
+			group: "ai",
+			run: (ed, range) =>
+				delRangeThen(ed, range, () => {
+					aiActions.organizeNote?.();
+				}),
 		});
 	}
 

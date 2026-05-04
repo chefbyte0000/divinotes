@@ -135,7 +135,6 @@
       noteTitle={data.note.title ?? ""}
       redirectHref={afterDeleteHref}
       syncStatus={saveStatus}
-      projectOrganize={data.projectOrganize}
       onSaveStatus={(s) => {
         saveStatus = s;
       }}
