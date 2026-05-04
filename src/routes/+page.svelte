@@ -12,7 +12,7 @@
   <div class="space-y-1">
     <h1 class="text-2xl font-semibold tracking-tight">General workspace</h1>
     <p class="text-muted-foreground text-sm leading-relaxed">
-      Notes without a project folder stay here. Use <a class="text-foreground underline underline-offset-4" href="/inbox">Inbox</a> for fresh items still in General.
+      Notes without a project stay here.
     </p>
   </div>
 

@@ -9,7 +9,7 @@
   );
 
   let afterDeleteHref = $derived(
-    data.list.projectId == null ? "/lists" : `/project/${data.list.projectId}`,
+    data.list.projectId == null ? "/" : `/project/${data.list.projectId}`,
   );
 </script>
 
